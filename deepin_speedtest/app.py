@@ -49,8 +49,9 @@ MLAB_NOTICE = (
 class EngineRun(QObject):
     """One run of the sandboxed engine process."""
 
-    event = pyqtSignal(dict)
-    finished = pyqtSignal()
+    # Not named "event": that would shadow QObject.event() and crash Qt.
+    message = pyqtSignal(dict)
+    done = pyqtSignal()
 
     def __init__(self, op: str, server: Optional[Dict[str, Any]] = None, parent=None) -> None:
         super().__init__(parent)
@@ -92,14 +93,14 @@ class EngineRun(QObject):
             except ValidationError as exc:
                 self._fail("Engine protocol error: %s" % exc)
                 return
-            self.event.emit(ev)
+            self.message.emit(ev)
             if ev["type"] == "error":
                 self._done = True
 
     def _fail(self, message: str) -> None:
         if not self._done:
             self._done = True
-            self.event.emit({"type": "error", "message": message})
+            self.message.emit({"type": "error", "message": message})
         self.cancel()
 
     def _timeout(self) -> None:
@@ -114,8 +115,8 @@ class EngineRun(QObject):
         self._read()
         if code != 0 and not self._done:
             self._done = True
-            self.event.emit({"type": "error", "message": "The measurement engine stopped unexpectedly."})
-        self.finished.emit()
+            self.message.emit({"type": "error", "message": "The measurement engine stopped unexpectedly."})
+        self.done.emit()
 
     def mark_done(self) -> None:
         self._done = True
@@ -261,11 +262,13 @@ class MainWindow(QMainWindow):
             b = QPushButton(text)
             b.setCheckable(True)
             b.setObjectName("nav")
+            b.setFocusPolicy(Qt.TabFocus)  # no focus frame after a mouse click
             self.nav_group.addButton(b, i)
             head.addWidget(b)
         self.nav_group.button(0).setChecked(True)
         about = QPushButton("About")
         about.setObjectName("nav")
+        about.setFocusPolicy(Qt.TabFocus)
         about.clicked.connect(self.show_about)
         head.addWidget(about)
         outer.addLayout(head)
@@ -283,6 +286,7 @@ class MainWindow(QMainWindow):
         self._apply_theme()
         self._populate_servers()
         self.refresh_history()
+        self.start_btn.setFocus()  # keep initial keyboard focus off the tab buttons
 
     # -- layout --------------------------------------------------------
 
@@ -390,7 +394,9 @@ class MainWindow(QMainWindow):
         border = "rgba(255,255,255,0.10)" if dark else "rgba(0,0,0,0.08)"
         self.setStyleSheet("""
             QLabel#brand { font-size: 18pt; font-weight: 700; letter-spacing: 0.5px; }
-            QPushButton#nav { border: none; padding: 6px 10px; border-radius: 8px; background: transparent; }
+            QPushButton#nav { border: none; outline: none; padding: 6px 10px; border-radius: 8px;
+                              background: transparent; }
+            QPushButton#nav:focus { outline: none; border: none; }
             QPushButton#nav:checked { background: %(card)s; font-weight: 600; }
             QPushButton#start { min-width: 180px; min-height: 44px; border-radius: 22px;
                                 font-size: 12pt; font-weight: 600; color: %(on_accent)s;
@@ -548,8 +554,8 @@ class MainWindow(QMainWindow):
                 self._set_running(False)
             run.deleteLater()
 
-        run.event.connect(on_event)
-        run.finished.connect(on_finished)
+        run.message.connect(on_event)
+        run.done.connect(on_finished)
 
     def _handle_event(self, ev: Dict[str, Any]) -> None:
         kind = ev["type"]
@@ -693,6 +699,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     font.setStyleStrategy(QFont.PreferAntialias)
     app.setFont(font)
     win = MainWindow()
+
+    def on_exception(kind, value, tb) -> None:
+        # PyQt aborts the whole process on an unhandled exception in a slot
+        # unless a hook is installed. Report it and keep the window alive.
+        import traceback
+        traceback.print_exception(kind, value, tb)
+        try:
+            win.status.setText("Internal error: %s" % clean_text(repr(value), 200))
+        except Exception:  # noqa: BLE001 - never raise from the hook
+            pass
+
+    sys.excepthook = on_exception
     win.resize(520, 720)
     win.show()
     return app.exec_()
