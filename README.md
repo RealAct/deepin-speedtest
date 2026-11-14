@@ -16,11 +16,22 @@ not use their servers or APIs.
 
 ## Install
 
-Download `swiftlet_<version>_all.deb` from the CI artifacts or a release and install it:
+Download `swiftlet_<version>_all.deb` (and `SHA256SUMS`) from the
+[latest release](https://github.com/RealAct/deepin-speedtest/releases/latest), check it and install it:
 
 ```sh
-sudo apt install ./swiftlet_0.1.0_all.deb
+sha256sum -c --ignore-missing SHA256SUMS
+sudo apt install ./swiftlet_1.0.0_all.deb
 ```
+
+The same package works on every supported distribution (it is `Architecture: all`).
+
+### Making a release
+
+Publish a GitHub release with a tag like `v1.2.3`. The *Release* workflow builds the `.deb`,
+stamps it with that version, and attaches it and `SHA256SUMS` to the release. To add the
+package to a release that already exists, run the *Release* workflow from the Actions tab and
+enter its tag.
 
 Dependencies come from your distribution's own repositories (`python3`, `python3-pyqt5`,
 `ca-certificates`), so they receive the distribution's security updates. Supported: Debian 12+ (Debian 11 is end-of-life but should still work),
@@ -30,7 +41,7 @@ Ubuntu 20.04+, Linux Mint 20+, Deepin 20.9/23 (Python ≥ 3.8, Qt 5).
 
 ```sh
 sudo apt install build-essential debhelper dh-python python3 python3-pyqt5 python3-pytest openssl
-dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../swiftlet_0.1.0_all.deb
+dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../swiftlet_1.0.0_all.deb
 ```
 
 Run without installing: `python3 -m swiftlet` (desktop) or `python3 -m swiftlet --cli`.
