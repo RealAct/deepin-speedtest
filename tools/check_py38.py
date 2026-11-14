@@ -5,7 +5,7 @@ import sys
 
 root = pathlib.Path(__file__).resolve().parent.parent
 bad = 0
-for path in sorted(list((root / "swiftlet").rglob("*.py")) + [root / "bin" / "swiftlet"]):
+for path in sorted(list((root / "deepin_speedtest").rglob("*.py")) + [root / "bin" / "deepin-speedtest"]):
     try:
         ast.parse(path.read_text(encoding="utf-8"), str(path), feature_version=(3, 8))
     except SyntaxError as exc:

@@ -11,7 +11,7 @@ def window(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     from PyQt5.QtWidgets import QApplication
-    from swiftlet.app import MainWindow
+    from deepin_speedtest.app import MainWindow
     app = QApplication.instance() or QApplication([])
     win = MainWindow()
     yield win
@@ -33,7 +33,7 @@ def test_window_builds_and_handles_events(window):
 
 
 def test_gauge_scale():
-    from swiftlet.gauge import value_to_fraction
+    from deepin_speedtest.gauge import value_to_fraction
     assert value_to_fraction(0) == 0
     assert value_to_fraction(1000) == 1
     assert 0 < value_to_fraction(5) < value_to_fraction(100) < value_to_fraction(999) < 1

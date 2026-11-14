@@ -5,7 +5,7 @@ import stat
 
 import pytest
 
-from swiftlet import storage
+from deepin_speedtest import storage
 
 RESULT = {"timestamp": 1763136000, "host": "ndt.example.org", "ping_ms": 10.5, "jitter_ms": 1.2,
           "download_mbps": 300.0, "upload_mbps": 40.0, "download_latency_ms": 25.0,
@@ -84,6 +84,6 @@ def test_settings_save_is_private():
 def test_refuses_symlinked_data_dir(xdg):
     (xdg / "data").mkdir()
     (xdg / "elsewhere").mkdir()
-    (xdg / "data" / "swiftlet").symlink_to(xdg / "elsewhere")
+    (xdg / "data" / "deepin-speedtest").symlink_to(xdg / "elsewhere")
     with pytest.raises(PermissionError):
         storage.data_dir()

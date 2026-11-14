@@ -25,8 +25,8 @@ def sub(rel, pattern, repl, count=1):
     path.write_text(new, encoding="utf-8")
 
 
-sub("swiftlet/__init__.py", r'^__version__ = "[^"]*"', '__version__ = "%s"' % version)
-sub("debian/changelog", r"^swiftlet \([^)]*\)", "swiftlet (%s)" % version)
-sub("man/swiftlet.1", r'"swiftlet [0-9.]+"', '"swiftlet %s"' % version)
-sub("data/io.github.realact.Swiftlet.metainfo.xml", r'<release version="[^"]*"', '<release version="%s"' % version)
+sub("deepin_speedtest/__init__.py", r'^__version__ = "[^"]*"', '__version__ = "%s"' % version)
+sub("debian/changelog", r"^deepin-speedtest \([^)]*\)", "deepin-speedtest (%s)" % version)
+sub("man/deepin-speedtest.1", r'"deepin-speedtest [0-9.]+"', '"deepin-speedtest %s"' % version)
+sub("data/io.github.realact.DeepinSpeedtest.metainfo.xml", r'<release version="[^"]*"', '<release version="%s"' % version)
 print("version set to", version)

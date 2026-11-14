@@ -1,16 +1,22 @@
 name: Release
 
 # Builds the .deb for a GitHub release and attaches it (plus SHA256SUMS).
-# Runs automatically when a release is published. For a release that already
-# exists, run it by hand from the Actions tab and give the tag, e.g. v1.0.0.
+# Runs automatically when a release is published. It can also be run by hand
+# from the Actions tab: give a tag, e.g. v1.0.1, and tick "create" to make a
+# new release (and tag) from the selected branch, or leave it unticked to add
+# the .deb to a release that already exists.
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to build and attach the .deb to (e.g. v1.0.0)"
+        description: "Release tag, e.g. v1.0.1"
         required: true
+      create:
+        description: "Create this release and tag from the selected branch first"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,8 +26,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  create:
+    name: Create the release
+    if: github.event_name == 'workflow_dispatch' && inputs.create
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Create release ${{ inputs.tag }} at ${{ github.sha }}
+        run: |
+          echo "$TAG" | grep -Eq '^v[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$' || { echo "Tag must look like v1.2.3"; exit 1; }
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "Deepin Speedtest ${TAG#v}" --generate-notes
+
   build:
     name: Build .deb
+    needs: create
+    # Run after "create", or straight away when it was skipped.
+    if: ${{ !cancelled() && (needs.create.result == 'success' || needs.create.result == 'skipped') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     # Built on the oldest supported base (Ubuntu 20.04, Python 3.8, debhelper 12)
@@ -75,7 +101,7 @@ jobs:
       - name: Check and checksum
         run: |
           mkdir dist
-          cp swiftlet_*_all.deb dist/
+          cp deepin-speedtest_*_all.deb dist/
           lintian dist/*.deb
           cd dist && sha256sum *.deb > SHA256SUMS && cat SHA256SUMS
 
@@ -88,6 +114,7 @@ jobs:
   publish:
     name: Attach to the release
     needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

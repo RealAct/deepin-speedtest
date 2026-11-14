@@ -1,8 +1,8 @@
-"""Swiftlet desktop UI (PyQt5).
+"""Deepin Speedtest desktop UI (PyQt5).
 
 The UI process never opens network connections. All measurements run in
-the sandboxed engine process (``swiftlet.engine``), and every message it
-sends back is validated by ``swiftlet.protocol.validate_event``.
+the sandboxed engine process (``deepin_speedtest.engine``), and every message it
+sends back is validated by ``deepin_speedtest.protocol.validate_event``.
 """
 
 from __future__ import annotations
@@ -32,13 +32,13 @@ AUTO = "auto"
 
 MLAB_NOTICE = (
     "<p><b>About the public M-Lab servers</b></p>"
-    "<p>By default Swiftlet measures against servers run by "
+    "<p>By default Deepin Speedtest measures against servers run by "
     "<a href='https://www.measurementlab.net/'>Measurement Lab (M-Lab)</a>, an open, "
     "non-profit research platform. Using them is free and needs no account.</p>"
     "<p><b>Privacy:</b> M-Lab publishes every test as open data for research, "
     "<b>including your public IP address</b>. See M-Lab's "
     "<a href='https://www.measurementlab.net/privacy/'>privacy policy</a>.</p>"
-    "<p>Swiftlet itself collects nothing: no telemetry, no accounts, no ads. "
+    "<p>Deepin Speedtest itself collects nothing: no telemetry, no accounts, no ads. "
     "If you prefer, choose <i>Cancel</i> and add your own self-hosted ndt7 or "
     "LibreSpeed server instead.</p>"
 )
@@ -631,7 +631,7 @@ class MainWindow(QMainWindow):
             self.history_summary.setText("No tests yet. Results are stored only on this computer.")
 
     def export_history(self) -> None:
-        default = os.path.join(os.path.expanduser("~"), "swiftlet-history.csv")
+        default = os.path.join(os.path.expanduser("~"), "deepin-speedtest-history.csv")
         path, _ = QFileDialog.getSaveFileName(self, "Export history", default, "CSV files (*.csv)")
         if not path:
             return
@@ -669,7 +669,7 @@ class MainWindow(QMainWindow):
             "protocol (M-Lab or self-hosted) or a self-hosted LibreSpeed server.</p>"
             "<p><b>Privacy:</b> no telemetry, no accounts. History is stored only on this computer.</p>"
             "<p><b>Engine sandbox:</b> %s</p>"
-            "<p>Not affiliated with Ookla® or Speedtest®.</p>") % (APP_NAME, __version__, sandbox))
+            "<p>A community project. Not affiliated with Deepin Technology, Ookla® or Speedtest®.</p>") % (APP_NAME, __version__, sandbox))
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt API
         if self.run is not None:

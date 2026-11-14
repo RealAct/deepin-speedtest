@@ -42,7 +42,7 @@ jobs:
       - name: Build the .deb (runs the test suite)
         run: |
           dpkg-buildpackage -us -uc -b
-          mkdir -p dist && cp ../swiftlet_*_all.deb dist/
+          mkdir -p dist && cp ../deepin-speedtest_*_all.deb dist/
 
       - name: Lintian
         run: lintian dist/*.deb  # exits non-zero on errors
@@ -56,13 +56,13 @@ jobs:
       - name: Install and smoke-test the package
         run: |
           apt-get install -y ./dist/*.deb
-          su tester -c "swiftlet --version"
-          su tester -c "swiftlet --cli --help"
-          if swiftlet; then echo "must refuse to run as root"; exit 1; fi
+          su tester -c "deepin-speedtest --version"
+          su tester -c "deepin-speedtest --cli --help"
+          if deepin-speedtest; then echo "must refuse to run as root"; exit 1; fi
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: matrix.image == 'debian:12'
         with:
-          name: swiftlet-deb
+          name: deepin-speedtest-deb
           path: dist/*.deb
           if-no-files-found: error

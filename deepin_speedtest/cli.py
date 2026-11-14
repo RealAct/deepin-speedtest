@@ -1,4 +1,4 @@
-"""Command-line interface: ``swiftlet --cli``.
+"""Command-line interface: ``deepin-speedtest --cli``.
 
 Uses exactly the same sandboxed engine and validation as the desktop UI.
 """
@@ -17,9 +17,9 @@ from .storage import History, Settings
 from .validate import ValidationError, parse_server_address, validate_https_base
 
 NOTICE = """\
-Swiftlet uses the public servers of Measurement Lab (M-Lab) by default.
+Deepin Speedtest uses the public servers of Measurement Lab (M-Lab) by default.
 M-Lab publishes every test as open research data, INCLUDING YOUR PUBLIC IP
-ADDRESS (https://www.measurementlab.net/privacy/). Swiftlet itself collects
+ADDRESS (https://www.measurementlab.net/privacy/). Deepin Speedtest itself collects
 nothing. Use --ndt7-server or --librespeed to test against your own server.
 """
 
@@ -78,7 +78,7 @@ def _collect(op: str, server: Optional[Dict[str, Any]], quiet: bool) -> List[Dic
 def main(argv: Optional[List[str]] = None) -> int:
     hardening.refuse_root()
     hardening.harden_process()
-    p = argparse.ArgumentParser(prog="swiftlet --cli", description="%s %s command-line speed test" % (
+    p = argparse.ArgumentParser(prog="deepin-speedtest --cli", description="%s %s command-line speed test" % (
         APP_NAME, __version__))
     p.add_argument("--list-servers", action="store_true", help="list nearby M-Lab servers")
     p.add_argument("--ndt7-server", metavar="HOST[:PORT]", help="use a self-hosted ndt7 server")

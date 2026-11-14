@@ -138,7 +138,7 @@ class WebSocket:
             "Sec-WebSocket-Key: {key}\r\n"
             "Sec-WebSocket-Version: 13\r\n"
             "Sec-WebSocket-Protocol: {proto}\r\n"
-            "User-Agent: swiftlet/{ver}\r\n"
+            "User-Agent: deepin-speedtest/{ver}\r\n"
             "\r\n"
         ).format(path=self._path, host=host_header, key=key, proto=self._subprotocol, ver=__version__)
         self._sock.sendall(request.encode("ascii"))

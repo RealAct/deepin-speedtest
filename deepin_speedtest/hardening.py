@@ -2,7 +2,7 @@
 
 Two layers are used:
 
-* ``harden_process()`` runs in every Swiftlet process: restrictive umask,
+* ``harden_process()`` runs in every Deepin Speedtest process: restrictive umask,
   no core dumps, not ptrace-able by other processes of the same user, and
   ``no_new_privs`` so nothing we start can ever gain privileges (setuid,
   file capabilities).
@@ -88,9 +88,9 @@ def _libc() -> Optional[ctypes.CDLL]:
 
 
 def refuse_root() -> None:
-    """Exit if started as root: Swiftlet never needs privileges."""
+    """Exit if started as root: Deepin Speedtest never needs privileges."""
     if os.geteuid() == 0 or os.getegid() == 0:
-        sys.stderr.write("swiftlet: refusing to run as root; start it as a normal user.\n")
+        sys.stderr.write("deepin-speedtest: refusing to run as root; start it as a normal user.\n")
         raise SystemExit(2)
 
 

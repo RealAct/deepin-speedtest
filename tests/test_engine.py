@@ -4,8 +4,8 @@ import sys
 import pytest
 
 
-from swiftlet.engine import librespeed, ndt7  # noqa: E402
-from swiftlet.engine.wsclient import WebSocket, WebSocketError  # noqa: E402
+from deepin_speedtest.engine import librespeed, ndt7  # noqa: E402
+from deepin_speedtest.engine.wsclient import WebSocket, WebSocketError  # noqa: E402
 
 from fakeservers import (LibreSpeedServer, Ndt7Handler, TLSServer, client_context,  # noqa: E402
                          make_cert, serve, server_context)

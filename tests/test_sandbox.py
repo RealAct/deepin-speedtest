@@ -10,13 +10,13 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from swiftlet import hardening  # noqa: E402
-from swiftlet.protocol import engine_command, engine_environment, request_line, validate_event  # noqa: E402
+from deepin_speedtest import hardening  # noqa: E402
+from deepin_speedtest.protocol import engine_command, engine_environment, request_line, validate_event  # noqa: E402
 
 PROBE = textwrap.dedent("""
     import json, os, socket, sys
     sys.path.insert(0, sys.argv[1])
-    from swiftlet import hardening
+    from deepin_speedtest import hardening
     secret, allowed, blocked = sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
     report = hardening.sandbox_engine([allowed])
     out = {"abi": report["landlock_abi"]}
@@ -26,7 +26,7 @@ PROBE = textwrap.dedent("""
         except OSError as e:
             return e.__class__.__name__
     out["read_secret"] = attempt(lambda: open(secret).read())
-    out["write_tmp"] = attempt(lambda: open("/tmp/swiftlet-probe-%d" % os.getpid(), "w").write("x"))
+    out["write_tmp"] = attempt(lambda: open("/tmp/deepin-speedtest-probe-%d" % os.getpid(), "w").write("x"))
     out["read_usr"] = attempt(lambda: os.listdir("/usr"))
     out["exec"] = attempt(lambda: os.execv("/bin/true", ["true"]))
     def conn(p):

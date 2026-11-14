@@ -17,7 +17,7 @@ trusted, but their contents are still validated.
 ```
 ┌────────────────────────── user session (unprivileged) ─────────────────────────┐
 │                                                                                │
-│  swiftlet (Qt UI)                      swiftlet engine (child process)         │
+│  deepin-speedtest (Qt UI)                      deepin-speedtest engine (child process)         │
 │  - no network access                   - Landlock: no file writes, no exec,    │
 │  - umask 077, not dumpable,              reads limited to system dirs,         │
 │    no core dumps, no_new_privs           TCP connect only to needed ports      │
@@ -35,12 +35,12 @@ trusted, but their contents are still validated.
 * Latency is measured by timing TCP handshakes, so no `CAP_NET_RAW` is needed for ICMP.
 * `PR_SET_NO_NEW_PRIVS` is set, so no child process can ever gain privileges.
 * `PR_SET_DUMPABLE=0` and `RLIMIT_CORE=0`: other processes of the same user cannot ptrace
-  Swiftlet, and no core files are written.
+  Deepin Speedtest, and no core files are written.
 
 ### Sandbox (engine)
 
 The engine is the only code that parses network data, so it is confined before the first
-connection (`swiftlet/hardening.py`):
+connection (`deepin_speedtest/hardening.py`):
 
 * **Landlock** (Linux ≥ 5.13; features are used up to the kernel's ABI):
   * file system: read-only access to `/usr`, `/lib*`, `/etc`, `/proc/self`, resolver directories
@@ -66,7 +66,7 @@ On kernels without Landlock (for example the 5.10 kernel of the end-of-life Debi
 * HTTP redirects are never followed.
 * M-Lab URLs from the Locate API must be `wss://` on a `*.measurement-lab.org` host with the exact
   ndt7 path. Any other entry is dropped.
-* WebSocket client (`swiftlet/engine/wsclient.py`): checks `Sec-WebSocket-Accept` and the
+* WebSocket client (`deepin_speedtest/engine/wsclient.py`): checks `Sec-WebSocket-Accept` and the
   subprotocol, rejects extensions, masked server frames, reserved bits, unknown opcodes, oversized
   control frames, messages over 16 MiB and text over 64 KiB. Binary data is counted and thrown away,
   never stored. Handshake responses are limited to 16 KiB.
@@ -75,7 +75,7 @@ On kernels without Landlock (for example the 5.10 kernel of the end-of-life Debi
 
 ### Input validation
 
-All untrusted input goes through `swiftlet/validate.py` or `swiftlet/protocol.py`:
+All untrusted input goes through `deepin_speedtest/validate.py` or `deepin_speedtest/protocol.py`:
 
 * host names (IDNA, label syntax, length), ports and URLs (scheme allow-list, no credentials, no
   `..`, no query or fragment for base URLs);
@@ -85,8 +85,8 @@ All untrusted input goes through `swiftlet/validate.py` or `swiftlet/protocol.py
 
 ### Local data
 
-* Settings (`~/.config/swiftlet/settings.json`) and history
-  (`~/.local/share/swiftlet/history.sqlite3`) are created 0600 in 0700 directories. They are
+* Settings (`~/.config/deepin-speedtest/settings.json`) and history
+  (`~/.local/share/deepin-speedtest/history.sqlite3`) are created 0600 in 0700 directories. They are
   refused if they are symlinks or owned by someone else, and every entry is re-validated on load.
 * SQL uses parameters only. `secure_delete` overwrites deleted rows, and "Clear all" runs `VACUUM`.
 * CSV export opens with `O_NOFOLLOW` and escapes cells that start with `= + - @` (formula

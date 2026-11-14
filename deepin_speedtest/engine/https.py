@@ -9,7 +9,7 @@ from typing import Optional
 from .. import __version__
 from .wsclient import make_tls_context
 
-USER_AGENT = "swiftlet/%s" % __version__
+USER_AGENT = "deepin-speedtest/%s" % __version__
 
 
 class HTTPSError(Exception):

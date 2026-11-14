@@ -11,8 +11,8 @@ def main() -> int:
         from .cli import main as cli_main
         return cli_main(args[1:])
     if args[:1] in (["-h"], ["--help"]):
-        print("usage: swiftlet [--cli [options] | --version]\n"
-              "Run without arguments for the desktop app; 'swiftlet --cli --help' for the terminal.")
+        print("usage: deepin-speedtest [--cli [options] | --version]\n"
+              "Run without arguments for the desktop app; 'deepin-speedtest --cli --help' for the terminal.")
         return 0
     from .hardening import refuse_root
     refuse_root()  # before Qt is even imported
