@@ -59,9 +59,10 @@ def _consent(settings: Settings, assume_yes: bool) -> bool:
     return True
 
 
-def _collect(op: str, server: Optional[Dict[str, Any]], quiet: bool) -> List[Dict[str, Any]]:
+def _collect(op: str, server: Optional[Dict[str, Any]], quiet: bool, network: str = "mlab",
+             high_speed: bool = False) -> List[Dict[str, Any]]:
     events = []
-    for ev in run_engine(op, server):
+    for ev in run_engine(op, server, network=network, high_speed=high_speed):
         events.append(ev)
         if quiet:
             continue
@@ -80,7 +81,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     hardening.harden_process()
     p = argparse.ArgumentParser(prog="deepin-speedtest --cli", description="%s %s command-line speed test" % (
         APP_NAME, __version__))
-    p.add_argument("--list-servers", action="store_true", help="list nearby M-Lab servers")
+    p.add_argument("--list-servers", action="store_true", help="list nearby public servers")
+    p.add_argument("--network", choices=("mlab", "librespeed"),
+                   help="public server network (default: the one chosen in Options, else mlab)")
+    p.add_argument("--high-speed", action="store_true",
+                   help="tune for lines faster than 1 Gbit/s (more parallel streams with LibreSpeed)")
     p.add_argument("--ndt7-server", metavar="HOST[:PORT]", help="use a self-hosted ndt7 server")
     p.add_argument("--librespeed", metavar="URL", help="use a self-hosted LibreSpeed server (https://...)")
     p.add_argument("--json", action="store_true", help="print the result as JSON")
@@ -94,11 +99,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     except ValidationError as exc:
         p.error(str(exc))
         return 2
-    if server is None and not _consent(settings, args.accept_mlab_privacy):
+    network = args.network or settings["network"]
+    high_speed = args.high_speed or settings["max_speed"] > 1000
+    if server is None and network == "mlab" and not _consent(settings, args.accept_mlab_privacy):
         return 1
 
     if args.list_servers:
-        events = _collect("locate", None, quiet=True)
+        events = _collect("locate", None, quiet=True, network=network)
         last = events[-1] if events else {"type": "error", "message": "no answer from engine"}
         if last["type"] != "servers":
             sys.stderr.write("error: %s\n" % last.get("message"))
@@ -108,7 +115,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     if server is None:
-        events = _collect("locate", None, quiet=True)
+        events = _collect("locate", None, quiet=True, network=network)
         last = events[-1] if events else {"type": "error", "message": "no answer from engine"}
         if last["type"] != "servers":
             sys.stderr.write("error: %s\n" % last.get("message"))
@@ -117,7 +124,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if not args.json:
             sys.stderr.write("Server: %s (%s)\n" % (server["name"], server["host"]))
 
-    events = _collect("run", server, quiet=args.json)
+    events = _collect("run", server, quiet=args.json, high_speed=high_speed)
     result = next((e for e in events if e["type"] == "result"), None)
     if result is None:
         err = next((e for e in events if e["type"] == "error"), {"message": "test failed"})

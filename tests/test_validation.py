@@ -107,3 +107,43 @@ def test_engine_events_rejected(line):
 def test_engine_event_rebuilt_without_extra_fields():
     ev = validate_event(b'{"type":"error","message":"bad\\u0007 thing","extra":"<b>x</b>"}')
     assert ev == {"type": "error", "message": "bad thing"}
+
+
+SAMPLE_LIBRESPEED = json.dumps([
+    {"id": 1, "name": "Amsterdam, Netherlands", "server": "//ams.speedtest.example.net/",
+     "dlURL": "garbage.php", "ulURL": "empty.php", "pingURL": "empty.php", "getIpURL": "getIP.php",
+     "sponsorName": "Example Hosting", "sponsorURL": "https://example.net"},
+    {"id": 2, "name": "Frankfurt", "server": "https://fra.example.org/speed", "dlURL": "backend/garbage.php",
+     "ulURL": "backend/empty.php"},
+    {"id": 3, "name": "Plain HTTP", "server": "http://insecure.example.org/", "dlURL": "garbage.php",
+     "ulURL": "empty.php"},
+    {"id": 4, "name": "Traversal", "server": "https://ok.example.org/", "dlURL": "../../etc/passwd",
+     "ulURL": "empty.php"},
+    {"id": 5, "name": "Odd port", "server": "https://ok.example.org:8443/", "dlURL": "garbage.php",
+     "ulURL": "empty.php"},
+    {"id": 6, "name": "Query", "server": "https://ok.example.org/", "dlURL": "garbage.php?x=1",
+     "ulURL": "empty.php"},
+    "junk", {"server": 7},
+]).encode()
+
+
+def test_librespeed_public_list_parsing():
+    from deepin_speedtest.engine.librespeed_public import parse_list
+    from deepin_speedtest.protocol import validate_server
+
+    servers = parse_list(SAMPLE_LIBRESPEED)
+    assert [s["host"] for s in servers] == ["ams.speedtest.example.net", "fra.example.org"]
+    assert servers[0]["base_url"] == "https://ams.speedtest.example.net/"
+    assert servers[0]["dl_path"] == "garbage.php" and servers[0]["custom"] is False
+    assert servers[1]["base_url"] == "https://fra.example.org/speed/"
+    assert validate_server(servers[0])["provider"] == "LibreSpeed · Example Hosting"
+    for bad in (b"{}", b"[]", b"nope", b'[{"server": "http://x.example.org/"}]'):
+        with pytest.raises(ValidationError):
+            parse_list(bad)
+
+
+@pytest.mark.parametrize("path", ["../x", "/abs", "a//b", "a/./b", "x?y=1", "", "a b", "x" * 200, None])
+def test_rel_path_rejections(path):
+    from deepin_speedtest.validate import validate_rel_path
+    with pytest.raises(ValidationError):
+        validate_rel_path(path)

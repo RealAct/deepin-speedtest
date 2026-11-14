@@ -22,10 +22,21 @@ third-party clients, and using them without permission would breach their terms.
   third-party clients. Deepin Speedtest finds servers with the documented Locate API
   (`locate.measurementlab.net/v2/nearest/ndt/ndt7`), which returns short-lived access tokens.
   Deepin Speedtest only sends the `client_name` and `client_version` parameters that the spec asks for.
+* **Optional: LibreSpeed public servers.** The LibreSpeed project publishes a list of
+  volunteer-run servers (`librespeed.org/backend-servers/servers.php`) for any client. The app
+  only uses entries that are `https://` on port 443, and picks the nearest by TCP handshake time.
+  Results are not published, but each operator sees the client IP. Capacity and reliability vary
+  from server to server.
+* **Speedtest.net is not offered.** Ookla does not license its servers for third-party apps.
 * **Self-hosted ndt7 and LibreSpeed** are first-class options for people who do not want their IP
   in a public dataset, for LAN and ISP testing, and for organisations.
 
 ## Trade-offs to know about
+
+* **Speeds above 1 Gbit/s:** the "up to 2.5 / 5 Gbit/s" option widens the dial and, for
+  LibreSpeed, uses 8 parallel connections with larger transfers. The result is still limited by
+  the server: few public servers have 5 Gbit/s to spare, and one ndt7 connection rarely fills a
+  multi-gigabit line. For a trustworthy multi-gigabit number, test against your own server.
 
 * **Privacy of M-Lab:** M-Lab publishes every test with the client IP address. Deepin Speedtest shows this
   notice and asks for consent before the first M-Lab test (desktop and CLI).

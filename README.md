@@ -22,7 +22,7 @@ Download `deepin-speedtest_<version>_all.deb` (and `SHA256SUMS`) from the
 
 ```sh
 sha256sum -c --ignore-missing SHA256SUMS
-sudo apt install ./deepin-speedtest_1.0.2_all.deb
+sudo apt install ./deepin-speedtest_1.1.0_all.deb
 ```
 
 The same package works on every supported distribution (it is `Architecture: all`).
@@ -42,7 +42,7 @@ Ubuntu 20.04+, Linux Mint 20+, Deepin 20.9/23 (Python ≥ 3.8, Qt 5).
 
 ```sh
 sudo apt install build-essential debhelper dh-python python3 python3-pyqt5 python3-pytest openssl
-dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../deepin-speedtest_1.0.2_all.deb
+dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../deepin-speedtest_1.1.0_all.deb
 ```
 
 Run without installing: `python3 -m deepin_speedtest` (desktop) or `python3 -m deepin_speedtest --cli`.
@@ -51,10 +51,13 @@ Run without installing: `python3 -m deepin_speedtest` (desktop) or `python3 -m d
 
 * **Desktop:** open *Deepin Speedtest* from the launcher and press **Start test**. Use **Find servers** to
   pick a specific nearby server, or **Add…** to use your own server.
+* **Options:** pick the public server network (M-Lab or LibreSpeed) and the speed range of the
+  dial, up to 5 Gbit/s. Above 1 Gbit/s, LibreSpeed tests use more parallel connections.
 * **Terminal:**
 
   ```sh
   deepin-speedtest --cli                          # nearest public M-Lab server
+  deepin-speedtest --cli --network librespeed --high-speed
   deepin-speedtest --cli --list-servers
   deepin-speedtest --cli --ndt7-server speed.example.org:4443
   deepin-speedtest --cli --librespeed https://speed.example.org/ --json
@@ -69,6 +72,7 @@ full trade-offs.
 | --- | --- | --- |
 | **ndt7** (default) | Public [M-Lab](https://www.measurementlab.net/) platform, found via the public Locate API | Free and needs no account. **M-Lab publishes every test, including your IP address, as open data.** Deepin Speedtest asks for consent before the first test. |
 | **ndt7, self-hosted** | Your own [`m-lab/ndt-server`](https://github.com/m-lab/ndt-server) | Nothing leaves your infrastructure. |
+| **LibreSpeed, public** | Volunteer-run servers from the [LibreSpeed](https://librespeed.org) project's public list | Choose it in **Options**. Several parallel connections, so it suits multi-gigabit lines. Results are not published, but the server operator sees your IP address. |
 | **LibreSpeed, self-hosted** | Your own [LibreSpeed](https://github.com/librespeed/speedtest) install | Multi-stream HTTPS test, easy to host. |
 
 ## Security and privacy

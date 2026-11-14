@@ -141,6 +141,18 @@ def validate_https_base(url: str) -> str:
     return urlunsplit(("https", netloc, path, "", ""))
 
 
+_REL_PATH = re.compile(r"^[A-Za-z0-9._~-]+(/[A-Za-z0-9._~-]+)*$")
+
+
+def validate_rel_path(path: Any) -> str:
+    """Validate a short relative URL path such as ``backend/garbage.php``."""
+    if not isinstance(path, str) or len(path) > 128 or not _REL_PATH.match(path):
+        raise ValidationError("invalid relative path")
+    if any(seg in (".", "..") for seg in path.split("/")):
+        raise ValidationError("invalid relative path")
+    return path
+
+
 def validate_ndt7_url(url: str, *, allow_any_host: bool, expected_test: str) -> str:
     """Validate an ndt7 WebSocket URL.
 

@@ -25,8 +25,8 @@ import statistics  # noqa: F401
 import threading  # noqa: F401
 
 from .. import hardening
-from ..validate import ValidationError, validate_https_base, validate_ndt7_url
-from . import latency, librespeed, mlab, ndt7
+from ..validate import ValidationError, validate_https_base, validate_ndt7_url, validate_rel_path
+from . import latency, librespeed, librespeed_public, mlab, ndt7
 from .https import HTTPSError
 from .wsclient import WebSocketError
 
@@ -70,12 +70,18 @@ class Engine:
                                                     allow_any_host=custom, expected_test="upload"),
                 }
             elif backend == "librespeed":
-                server = {"backend": "librespeed", "base_url": validate_https_base(server.get("base_url", ""))}
+                server = {"backend": "librespeed",
+                          "base_url": validate_https_base(server.get("base_url", "")),
+                          "dl_path": validate_rel_path(server.get("dl_path", "backend/garbage.php")),
+                          "ul_path": validate_rel_path(server.get("ul_path", "backend/empty.php"))}
             else:
                 raise ValidationError("unknown backend")
-            req = {"op": "run", "server": server}
+            req = {"op": "run", "server": server, "high_speed": req.get("high_speed") is True}
         else:
-            req = {"op": "locate"}
+            network = req.get("network", "mlab")
+            if network not in ("mlab", "librespeed"):
+                raise ValidationError("unknown server network")
+            req = {"op": "locate", "network": network}
         return req
 
     @staticmethod
@@ -92,8 +98,10 @@ class Engine:
 
     def handle(self, req: Dict[str, Any]) -> None:
         if req["op"] == "locate":
-            self.emit({"type": "servers", "servers": mlab.locate(ssl_context=self._ctx)})
+            finder = librespeed_public if req["network"] == "librespeed" else mlab
+            self.emit({"type": "servers", "servers": finder.locate(ssl_context=self._ctx)})
             return
+        fast = req["high_speed"]
         server = req["server"]
         if server["backend"] == "ndt7":
             target = urlsplit(server["download_url"])
@@ -110,14 +118,16 @@ class Engine:
         if server["backend"] == "ndt7":
             down = ndt7.download(server["download_url"], self.emit, ssl_context=self._ctx)
         else:
-            down = librespeed.download(server["base_url"], self.emit, ssl_context=self._ctx)
+            down = librespeed.download(server["base_url"], self.emit, ssl_context=self._ctx,
+                                       path=server["dl_path"], high_speed=fast)
         self.emit({"type": "measured", "phase": "download", "value": down["download_mbps"]})
 
         self.emit({"type": "stage", "phase": "upload"})
         if server["backend"] == "ndt7":
             up = ndt7.upload(server["upload_url"], self.emit, ssl_context=self._ctx)
         else:
-            up = librespeed.upload(server["base_url"], self.emit, ssl_context=self._ctx)
+            up = librespeed.upload(server["base_url"], self.emit, ssl_context=self._ctx,
+                                   path=server["ul_path"], high_speed=fast)
         self.emit({"type": "measured", "phase": "upload", "value": up["upload_mbps"]})
 
         self.emit({

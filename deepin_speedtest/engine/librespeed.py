@@ -18,9 +18,12 @@ from urllib.parse import urlsplit
 from .https import USER_AGENT, open_connection
 
 STREAMS = 4
+HIGH_SPEED_STREAMS = 8        # multi-gigabit links need more parallel TCP streams
 DURATION = 10.0
 CHUNK = 64 * 1024
+HIGH_SPEED_CHUNK = 512 * 1024
 UPLOAD_BODY = 4 * 1024 * 1024
+HIGH_SPEED_UPLOAD_BODY = 64 * 1024 * 1024
 PROGRESS_INTERVAL = 0.2
 
 Emit = Callable[[Dict[str, Any]], None]
@@ -42,11 +45,11 @@ def _target(base_url: str):
     return parts.hostname or "", parts.port or 443, parts.path or "/"
 
 
-def _run(worker: Callable[[float, _Counter], None], phase: str, emit: Emit) -> float:
+def _run(worker: Callable[[float, _Counter], None], phase: str, emit: Emit, streams: int = STREAMS) -> float:
     counter = _Counter()
     deadline = time.monotonic() + DURATION
     threads = [threading.Thread(target=worker, args=(deadline, counter), daemon=True)
-               for _ in range(STREAMS)]
+               for _ in range(streams)]
     start = time.monotonic()
     for t in threads:
         t.start()
@@ -65,20 +68,24 @@ def _run(worker: Callable[[float, _Counter], None], phase: str, emit: Emit) -> f
     return round(counter.bytes * 8 / elapsed / 1e6, 2)
 
 
-def download(base_url: str, emit: Emit, *, ssl_context: Optional[ssl.SSLContext] = None) -> Dict[str, Any]:
-    host, port, path = _target(base_url)
+def download(base_url: str, emit: Emit, *, ssl_context: Optional[ssl.SSLContext] = None,
+             path: str = "backend/garbage.php", high_speed: bool = False) -> Dict[str, Any]:
+    host, port, base = _target(base_url)
+    chunk = HIGH_SPEED_CHUNK if high_speed else CHUNK
+    # ckSize is the number of 1 MiB chunks the server sends per request.
+    url = base + path + ("?ckSize=1024" if high_speed else "?ckSize=100")
 
     def worker(deadline: float, counter: _Counter) -> None:
         try:
             while time.monotonic() < deadline:
                 conn = open_connection(host, port, timeout=10.0, ssl_context=ssl_context)
                 try:
-                    conn.request("GET", path + "backend/garbage.php?ckSize=100",
+                    conn.request("GET", url,
                                  headers={"User-Agent": USER_AGENT, "Cache-Control": "no-store"})
                     resp = conn.getresponse()
                     if resp.status != 200:
                         raise OSError("server answered HTTP %d" % resp.status)
-                    buf = bytearray(CHUNK)
+                    buf = bytearray(chunk)
                     while time.monotonic() < deadline:
                         got = resp.readinto(buf)
                         if not got:
@@ -89,31 +96,35 @@ def download(base_url: str, emit: Emit, *, ssl_context: Optional[ssl.SSLContext]
         except (OSError, ValueError) as exc:  # http.client errors derive from these
             counter.errors.append(str(exc)[:200])
 
-    return {"download_mbps": _run(worker, "download", emit), "download_latency_ms": None}
+    streams = HIGH_SPEED_STREAMS if high_speed else STREAMS
+    return {"download_mbps": _run(worker, "download", emit, streams), "download_latency_ms": None}
 
 
-def upload(base_url: str, emit: Emit, *, ssl_context: Optional[ssl.SSLContext] = None) -> Dict[str, Any]:
-    host, port, path = _target(base_url)
-    filler = os.urandom(CHUNK)
+def upload(base_url: str, emit: Emit, *, ssl_context: Optional[ssl.SSLContext] = None,
+           path: str = "backend/empty.php", high_speed: bool = False) -> Dict[str, Any]:
+    host, port, base = _target(base_url)
+    chunk = HIGH_SPEED_CHUNK if high_speed else CHUNK
+    body_size = HIGH_SPEED_UPLOAD_BODY if high_speed else UPLOAD_BODY
+    filler = os.urandom(chunk)
 
     def body(deadline: float, counter: _Counter) -> Iterator[bytes]:
         sent = 0
-        while sent < UPLOAD_BODY:
+        while sent < body_size:
             if time.monotonic() >= deadline:
                 raise _Stop()
             yield filler
-            sent += CHUNK
-            counter.add(CHUNK)
+            sent += chunk
+            counter.add(chunk)
 
     def worker(deadline: float, counter: _Counter) -> None:
         try:
             while time.monotonic() < deadline:
                 conn = open_connection(host, port, timeout=10.0, ssl_context=ssl_context)
                 try:
-                    conn.request("POST", path + "backend/empty.php", body=body(deadline, counter),
+                    conn.request("POST", base + path, body=body(deadline, counter),
                                  headers={"User-Agent": USER_AGENT,
                                           "Content-Type": "application/octet-stream",
-                                          "Content-Length": str(UPLOAD_BODY)})
+                                          "Content-Length": str(body_size)})
                     resp = conn.getresponse()
                     resp.read(4096)
                     if resp.status != 200:
@@ -125,7 +136,8 @@ def upload(base_url: str, emit: Emit, *, ssl_context: Optional[ssl.SSLContext] =
         except (OSError, ValueError) as exc:
             counter.errors.append(str(exc)[:200])
 
-    return {"upload_mbps": _run(worker, "upload", emit), "upload_latency_ms": None}
+    streams = HIGH_SPEED_STREAMS if high_speed else STREAMS
+    return {"upload_mbps": _run(worker, "upload", emit, streams), "upload_latency_ms": None}
 
 
 class _Stop(Exception):

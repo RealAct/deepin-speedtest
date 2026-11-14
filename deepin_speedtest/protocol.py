@@ -14,7 +14,7 @@ import sys
 from typing import Any, Dict, Iterator, List, Optional
 
 from .validate import (ValidationError, clean_text, finite_number, optional_number,
-                       validate_hostname, validate_https_base, validate_ndt7_url)
+                       validate_hostname, validate_https_base, validate_ndt7_url, validate_rel_path)
 
 MAX_LINE = 64 * 1024
 PHASES = ("ping", "download", "upload")
@@ -57,12 +57,14 @@ def validate_server(raw: Any) -> Dict[str, Any]:
     if backend == "librespeed":
         return {
             "backend": "librespeed",
-            "custom": True,
-            "id": clean_text(raw.get("id", ""), 253),
+            "custom": raw.get("custom", True) is not False,
+            "id": clean_text(raw.get("id", ""), 600),
             "name": clean_text(raw.get("name", ""), 120) or "LibreSpeed server",
             "host": validate_hostname(raw.get("host", "")),
-            "provider": "LibreSpeed",
+            "provider": clean_text(raw.get("provider", ""), 80) or "LibreSpeed",
             "base_url": validate_https_base(raw.get("base_url", "")),
+            "dl_path": validate_rel_path(raw.get("dl_path", "backend/garbage.php")),
+            "ul_path": validate_rel_path(raw.get("ul_path", "backend/empty.php")),
         }
     raise ValidationError("unknown backend")
 
@@ -106,7 +108,7 @@ def validate_event(line: bytes) -> Dict[str, Any]:
         }
     if kind == "servers":
         servers = ev.get("servers")
-        if not isinstance(servers, list) or len(servers) > 16:
+        if not isinstance(servers, list) or not 1 <= len(servers) <= 16:
             raise ValidationError("bad server list")
         return {"type": kind, "servers": [validate_server(s) for s in servers]}
     if kind == "sandbox":
@@ -124,21 +126,29 @@ def _phase(value: Any) -> str:
     return value
 
 
-def request_line(op: str, server: Optional[Dict[str, Any]] = None) -> bytes:
+NETWORKS = ("mlab", "librespeed")
+
+
+def request_line(op: str, server: Optional[Dict[str, Any]] = None, *, network: str = "mlab",
+                 high_speed: bool = False) -> bytes:
     req: Dict[str, Any] = {"op": op}
+    if op == "locate":
+        req["network"] = network
     if server is not None:
         req["server"] = server
+        req["high_speed"] = bool(high_speed)
     return (json.dumps(req, separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def run_engine(op: str, server: Optional[Dict[str, Any]] = None) -> Iterator[Dict[str, Any]]:
+def run_engine(op: str, server: Optional[Dict[str, Any]] = None, *, network: str = "mlab",
+               high_speed: bool = False) -> Iterator[Dict[str, Any]]:
     """Run the engine synchronously (used by the CLI) and yield validated events."""
     proc = subprocess.Popen(engine_command(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.DEVNULL, env=engine_environment(), cwd="/",
                             close_fds=True)
     assert proc.stdin is not None and proc.stdout is not None
     try:
-        proc.stdin.write(request_line(op, server))
+        proc.stdin.write(request_line(op, server, network=network, high_speed=high_speed))
         proc.stdin.close()
         while True:
             line = proc.stdout.readline(MAX_LINE + 1)

@@ -71,7 +71,11 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "mlab_consent": False,
     "selected_server": "auto",
     "custom_servers": [],
+    "network": "mlab",        # public server network: "mlab" or "librespeed"
+    "max_speed": 1000,        # gauge range / tuning, in Mbit/s: 1000, 2500 or 5000
 }
+
+MAX_SPEEDS = (1000, 2500, 5000)
 
 
 class Settings:
@@ -101,6 +105,10 @@ class Settings:
         sel = doc.get("selected_server")
         if isinstance(sel, str):
             self.values["selected_server"] = clean_text(sel, 300) or "auto"
+        if doc.get("network") in ("mlab", "librespeed"):
+            self.values["network"] = doc["network"]
+        if doc.get("max_speed") in MAX_SPEEDS and not isinstance(doc.get("max_speed"), bool):
+            self.values["max_speed"] = doc["max_speed"]
         servers = []
         stored = doc.get("custom_servers")
         for item in stored[:MAX_CUSTOM_SERVERS] if isinstance(stored, list) else []:
