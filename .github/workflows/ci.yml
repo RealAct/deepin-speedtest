@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  deb:
+    name: Build and test (${{ matrix.image }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - debian:12      # Python 3.11, base of Deepin 23
+          - debian:13      # Python 3.13, current stable
+          - ubuntu:20.04   # Python 3.8, base of Linux Mint 20
+          - ubuntu:22.04   # Linux Mint 21
+          - ubuntu:24.04   # Linux Mint 22
+    container:
+      image: ${{ matrix.image }}
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      # Actions are pinned to full commit SHAs, not mutable tags.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential debhelper dh-python python3 python3-pytest python3-pyqt5 \
+            openssl lintian fakeroot ca-certificates
+
+      - name: Build the .deb (runs the test suite)
+        run: |
+          dpkg-buildpackage -us -uc -b
+          mkdir -p dist && cp ../swiftlet_*_all.deb dist/
+
+      - name: Lintian
+        run: lintian dist/*.deb  # exits non-zero on errors
+
+      - name: Run the tests as an unprivileged user (sandbox + engine tests)
+        run: |
+          useradd -m tester
+          cp -r . /home/tester/src && chown -R tester /home/tester/src
+          su tester -c "cd /home/tester/src && QT_QPA_PLATFORM=offscreen python3 -m pytest -q -p no:cacheprovider tests"
+
+      - name: Install and smoke-test the package
+        run: |
+          apt-get install -y ./dist/*.deb
+          su tester -c "swiftlet --version"
+          su tester -c "swiftlet --cli --help"
+          if swiftlet; then echo "must refuse to run as root"; exit 1; fi
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: matrix.image == 'debian:12'
+        with:
+          name: swiftlet-deb
+          path: dist/*.deb
+          if-no-files-found: error

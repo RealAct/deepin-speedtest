@@ -1,0 +1,47 @@
+.TH SWIFTLET 1 "November 2026" "swiftlet 0.1.0" "User Commands"
+.SH NAME
+swiftlet \- open, private internet speed test
+.SH SYNOPSIS
+.B swiftlet
+.br
+.B swiftlet \-\-cli
+[\fB\-\-list\-servers\fR] [\fB\-\-ndt7\-server\fR \fIHOST[:PORT]\fR | \fB\-\-librespeed\fR \fIURL\fR]
+[\fB\-\-json\fR] [\fB\-\-no\-save\fR] [\fB\-\-accept\-mlab\-privacy\fR]
+.SH DESCRIPTION
+.B swiftlet
+measures latency, jitter, download and upload speed. Without arguments it opens
+the desktop application. With \fB\-\-cli\fR it runs a test in the terminal.
+.PP
+Tests use the open ndt7 protocol against the public Measurement Lab (M-Lab)
+servers, or against a self-hosted ndt7 or LibreSpeed server. M-Lab publishes
+test results, including the client IP address, as open data. Swiftlet sends no
+telemetry and stores its history only in \fI$XDG_DATA_HOME/swiftlet\fR.
+.PP
+All connections use TLS with certificate verification. Network measurements run
+in a separate, sandboxed process. Swiftlet refuses to run as root.
+.SH OPTIONS
+.TP
+.B \-\-list\-servers
+List nearby M-Lab servers.
+.TP
+.BI \-\-ndt7\-server " HOST[:PORT]"
+Test against a self-hosted ndt7 server (wss:// only).
+.TP
+.BI \-\-librespeed " URL"
+Test against a self-hosted LibreSpeed server (https:// only).
+.TP
+.B \-\-json
+Print the result as JSON.
+.TP
+.B \-\-no\-save
+Do not add the result to the local history.
+.TP
+.B \-\-accept\-mlab\-privacy
+Accept the M-Lab open-data notice without an interactive prompt.
+.SH FILES
+.TP
+.I ~/.config/swiftlet/settings.json
+Settings and self-hosted servers.
+.TP
+.I ~/.local/share/swiftlet/history.sqlite3
+Result history.
