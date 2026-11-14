@@ -37,7 +37,7 @@ def server_context(crt: str, key: str) -> ssl.SSLContext:
 
 
 def client_context(crt: str) -> ssl.SSLContext:
-    from swiftlet.engine.wsclient import make_tls_context
+    from deepin_speedtest.engine.wsclient import make_tls_context
     ctx = make_tls_context()
     ctx.load_verify_locations(crt)
     return ctx
@@ -227,7 +227,7 @@ def serve(server):
 
 
 def free_tmpdir():
-    return tempfile.mkdtemp(prefix="swiftlet-test-")
+    return tempfile.mkdtemp(prefix="deepin-speedtest-test-")
 
 
 __all__ = ["make_cert", "server_context", "client_context", "Ndt7Handler", "TLSServer",

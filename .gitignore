@@ -2,7 +2,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 debian/.debhelper/
-debian/swiftlet/
+debian/deepin-speedtest/
 debian/files
 debian/*.substvars
 debian/*.debhelper.log

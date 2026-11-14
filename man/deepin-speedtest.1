@@ -1,24 +1,24 @@
-.TH SWIFTLET 1 "November 2026" "swiftlet 1.0.0" "User Commands"
+.TH DEEPIN-SPEEDTEST 1 "November 2026" "deepin-speedtest 1.0.1" "User Commands"
 .SH NAME
-swiftlet \- open, private internet speed test
+deepin-speedtest \- open, private internet speed test
 .SH SYNOPSIS
-.B swiftlet
+.B deepin-speedtest
 .br
-.B swiftlet \-\-cli
+.B deepin-speedtest \-\-cli
 [\fB\-\-list\-servers\fR] [\fB\-\-ndt7\-server\fR \fIHOST[:PORT]\fR | \fB\-\-librespeed\fR \fIURL\fR]
 [\fB\-\-json\fR] [\fB\-\-no\-save\fR] [\fB\-\-accept\-mlab\-privacy\fR]
 .SH DESCRIPTION
-.B swiftlet
+.B deepin-speedtest
 measures latency, jitter, download and upload speed. Without arguments it opens
 the desktop application. With \fB\-\-cli\fR it runs a test in the terminal.
 .PP
 Tests use the open ndt7 protocol against the public Measurement Lab (M-Lab)
 servers, or against a self-hosted ndt7 or LibreSpeed server. M-Lab publishes
-test results, including the client IP address, as open data. Swiftlet sends no
-telemetry and stores its history only in \fI$XDG_DATA_HOME/swiftlet\fR.
+test results, including the client IP address, as open data. Deepin Speedtest sends no
+telemetry and stores its history only in \fI$XDG_DATA_HOME/deepin-speedtest\fR.
 .PP
 All connections use TLS with certificate verification. Network measurements run
-in a separate, sandboxed process. Swiftlet refuses to run as root.
+in a separate, sandboxed process. Deepin Speedtest refuses to run as root.
 .SH OPTIONS
 .TP
 .B \-\-list\-servers
@@ -40,8 +40,8 @@ Do not add the result to the local history.
 Accept the M-Lab open-data notice without an interactive prompt.
 .SH FILES
 .TP
-.I ~/.config/swiftlet/settings.json
+.I ~/.config/deepin-speedtest/settings.json
 Settings and self-hosted servers.
 .TP
-.I ~/.local/share/swiftlet/history.sqlite3
+.I ~/.local/share/deepin-speedtest/history.sqlite3
 Result history.

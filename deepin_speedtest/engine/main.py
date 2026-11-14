@@ -3,7 +3,7 @@
 The desktop UI never talks to the network itself. It starts this module as a
 separate, unprivileged child process, writes one JSON request line to its
 stdin and reads JSON event lines from its stdout. The engine locks itself
-down (see ``swiftlet.hardening``) before opening any connection.
+down (see ``deepin_speedtest.hardening``) before opening any connection.
 """
 
 from __future__ import annotations

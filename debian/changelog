@@ -1,11 +1,20 @@
-swiftlet (1.0.0) unstable; urgency=medium
+deepin-speedtest (1.0.1) unstable; urgency=medium
+
+  * Rename the app, package and command from Swiftlet/swiftlet to
+    Deepin Speedtest/deepin-speedtest. The package replaces swiftlet.
+  * Settings and history now live in ~/.config/deepin-speedtest and
+    ~/.local/share/deepin-speedtest.
+
+ -- RealAct <8281482+RealAct@users.noreply.github.com>  Sat, 14 Nov 2026 17:45:00 +0000
+
+deepin-speedtest (1.0.0) unstable; urgency=medium
 
   * First public release.
   * Release workflow attaches the .deb and SHA256SUMS to GitHub releases.
 
  -- RealAct <8281482+RealAct@users.noreply.github.com>  Sat, 14 Nov 2026 17:30:00 +0000
 
-swiftlet (0.1.0) unstable; urgency=medium
+deepin-speedtest (0.1.0) unstable; urgency=medium
 
   * Initial version.
 

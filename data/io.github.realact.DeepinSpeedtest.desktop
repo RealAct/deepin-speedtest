@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=Swiftlet
+Name=Deepin Speedtest
 GenericName=Internet Speed Test
 Comment=Measure your internet speed, latency and jitter with open servers
-Exec=swiftlet
-Icon=io.github.realact.Swiftlet
+Exec=deepin-speedtest
+Icon=io.github.realact.DeepinSpeedtest
 Terminal=false
 Categories=Network;Utility;Monitor;
 Keywords=speed;speedtest;bandwidth;internet;ping;latency;jitter;ndt7;librespeed;
 StartupNotify=true
-StartupWMClass=swiftlet
+StartupWMClass=deepin-speedtest

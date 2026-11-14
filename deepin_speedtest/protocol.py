@@ -26,7 +26,7 @@ def engine_command() -> List[str]:
     """Command line that runs the engine in isolated mode (-I: ignore PYTHON*
     environment variables, user site-packages and the current directory)."""
     pkg_parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    code = "import sys;sys.path.insert(0,sys.argv[1]);from swiftlet.engine.main import main;sys.exit(main())"
+    code = "import sys;sys.path.insert(0,sys.argv[1]);from deepin_speedtest.engine.main import main;sys.exit(main())"
     return [sys.executable, "-I", "-c", code, pkg_parent]
 
 

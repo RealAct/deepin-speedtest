@@ -1,13 +1,14 @@
-# Swiftlet
+# Deepin Speedtest
 
 An open-source, privacy-respecting internet speed test for the **Deepin** desktop and every other
 Debian-based distribution (Debian, Ubuntu, Linux Mint, …).
 
-Swiftlet measures **ping, jitter, download and upload** (plus latency under load), lets you
+Deepin Speedtest measures **ping, jitter, download and upload** (plus latency under load), lets you
 **choose the test server**, and keeps a **local result history** you can export to CSV. It has a
 desktop app (Qt) and a terminal mode.
 
-It is an original, independent project. It is not affiliated with Ookla® or Speedtest®, and it does
+It is an original, independent community project. It is not affiliated with Deepin Technology
+(the Deepin name is used only to say which desktop it targets), nor with Ookla® or Speedtest®, and it does
 not use their servers or APIs.
 
 | Speed test | History |
@@ -16,12 +17,12 @@ not use their servers or APIs.
 
 ## Install
 
-Download `swiftlet_<version>_all.deb` (and `SHA256SUMS`) from the
+Download `deepin-speedtest_<version>_all.deb` (and `SHA256SUMS`) from the
 [latest release](https://github.com/RealAct/deepin-speedtest/releases/latest), check it and install it:
 
 ```sh
 sha256sum -c --ignore-missing SHA256SUMS
-sudo apt install ./swiftlet_1.0.0_all.deb
+sudo apt install ./deepin-speedtest_1.0.1_all.deb
 ```
 
 The same package works on every supported distribution (it is `Architecture: all`).
@@ -41,32 +42,32 @@ Ubuntu 20.04+, Linux Mint 20+, Deepin 20.9/23 (Python ≥ 3.8, Qt 5).
 
 ```sh
 sudo apt install build-essential debhelper dh-python python3 python3-pyqt5 python3-pytest openssl
-dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../swiftlet_1.0.0_all.deb
+dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../deepin-speedtest_1.0.1_all.deb
 ```
 
-Run without installing: `python3 -m swiftlet` (desktop) or `python3 -m swiftlet --cli`.
+Run without installing: `python3 -m deepin_speedtest` (desktop) or `python3 -m deepin_speedtest --cli`.
 
 ## Use
 
-* **Desktop:** open *Swiftlet* from the launcher and press **Start test**. Use **Find servers** to
+* **Desktop:** open *Deepin Speedtest* from the launcher and press **Start test**. Use **Find servers** to
   pick a specific nearby server, or **Add…** to use your own server.
 * **Terminal:**
 
   ```sh
-  swiftlet --cli                          # nearest public M-Lab server
-  swiftlet --cli --list-servers
-  swiftlet --cli --ndt7-server speed.example.org:4443
-  swiftlet --cli --librespeed https://speed.example.org/ --json
+  deepin-speedtest --cli                          # nearest public M-Lab server
+  deepin-speedtest --cli --list-servers
+  deepin-speedtest --cli --ndt7-server speed.example.org:4443
+  deepin-speedtest --cli --librespeed https://speed.example.org/ --json
   ```
 
 ## Test servers (backends)
 
-Swiftlet speaks open, documented protocols only. See [docs/BACKENDS.md](docs/BACKENDS.md) for the
+Deepin Speedtest speaks open, documented protocols only. See [docs/BACKENDS.md](docs/BACKENDS.md) for the
 full trade-offs.
 
 | Backend | Servers | Notes |
 | --- | --- | --- |
-| **ndt7** (default) | Public [M-Lab](https://www.measurementlab.net/) platform, found via the public Locate API | Free and needs no account. **M-Lab publishes every test, including your IP address, as open data.** Swiftlet asks for consent before the first test. |
+| **ndt7** (default) | Public [M-Lab](https://www.measurementlab.net/) platform, found via the public Locate API | Free and needs no account. **M-Lab publishes every test, including your IP address, as open data.** Deepin Speedtest asks for consent before the first test. |
 | **ndt7, self-hosted** | Your own [`m-lab/ndt-server`](https://github.com/m-lab/ndt-server) | Nothing leaves your infrastructure. |
 | **LibreSpeed, self-hosted** | Your own [LibreSpeed](https://github.com/librespeed/speedtest) install | Multi-stream HTTPS test, easy to host. |
 
@@ -74,8 +75,8 @@ full trade-offs.
 
 Security was the top design priority. In short:
 
-* **No telemetry, no accounts, no ads.** History stays in `~/.local/share/swiftlet` (mode 0600).
-* **No root, ever.** Swiftlet refuses to start as root, and nothing needs `sudo`. Latency is
+* **No telemetry, no accounts, no ads.** History stays in `~/.local/share/deepin-speedtest` (mode 0600).
+* **No root, ever.** Deepin Speedtest refuses to start as root, and nothing needs `sudo`. Latency is
   measured with TCP handshakes instead of ICMP, so no raw-socket capability is needed.
 * **TLS everywhere.** Only `wss://` and `https://`, certificate verification always on, TLS ≥ 1.2,
   no redirects followed, and no switch to turn any of this off.

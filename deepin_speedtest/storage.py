@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from .validate import ValidationError, clean_text, finite_number, optional_number
 
-APP_DIR = "swiftlet"
+APP_DIR = "deepin-speedtest"
 MAX_HISTORY = 5000
 MAX_SETTINGS_BYTES = 256 * 1024
 MAX_CUSTOM_SERVERS = 32

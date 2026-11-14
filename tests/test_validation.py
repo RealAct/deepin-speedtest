@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from swiftlet.engine.mlab import parse_locate
-from swiftlet.protocol import validate_event
-from swiftlet.validate import (ValidationError, clean_text, parse_server_address,
+from deepin_speedtest.engine.mlab import parse_locate
+from deepin_speedtest.protocol import validate_event
+from deepin_speedtest.validate import (ValidationError, clean_text, parse_server_address,
                                validate_hostname, validate_https_base, validate_ndt7_url)
 
 TOKEN = "eyJhbGciOiJFZERTQSJ9.eyJhdWQiOlsibWxhYjEifX0.c2ln"

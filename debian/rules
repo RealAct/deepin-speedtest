@@ -6,7 +6,7 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 	dh $@ --with python3
 
 override_dh_auto_install:
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/swiftlet PREFIX=/usr
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/deepin-speedtest PREFIX=/usr
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
@@ -15,4 +15,4 @@ ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 endif
 
 override_dh_python3:
-	dh_python3 /usr/share/swiftlet
+	dh_python3 /usr/share/deepin-speedtest

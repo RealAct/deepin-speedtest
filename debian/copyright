@@ -1,13 +1,13 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: swiftlet
+Upstream-Name: deepin-speedtest
 Source: https://github.com/RealAct/deepin-speedtest
 
 Files: *
-Copyright: 2026 RealAct and Swiftlet contributors
+Copyright: 2026 RealAct and Deepin Speedtest contributors
 License: GPL-3+
 
-Files: data/io.github.realact.Swiftlet.metainfo.xml
-Copyright: 2026 RealAct and Swiftlet contributors
+Files: data/io.github.realact.DeepinSpeedtest.metainfo.xml
+Copyright: 2026 RealAct and Deepin Speedtest contributors
 License: CC0-1.0
  To the extent possible under law, the authors have waived all copyright and
  related or neighboring rights to this file.

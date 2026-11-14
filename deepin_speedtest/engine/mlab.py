@@ -23,7 +23,7 @@ MAX_SERVERS = 8
 
 def client_params() -> Dict[str, str]:
     # Only the client name and version are sent, as the ndt7 spec asks.
-    return {"client_name": "swiftlet", "client_version": __version__}
+    return {"client_name": "deepin-speedtest", "client_version": __version__}
 
 
 def locate(ssl_context: Optional[ssl.SSLContext] = None, timeout: float = 10.0) -> List[Dict[str, Any]]:

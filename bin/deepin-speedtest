@@ -1,11 +1,11 @@
 #!/usr/bin/python3 -I
-# Launcher installed as /usr/bin/swiftlet. "-I" (isolated mode) ignores
+# Launcher installed as /usr/bin/deepin-speedtest. "-I" (isolated mode) ignores
 # PYTHON* environment variables, the user site directory and the current
 # directory, so nothing outside the package can be imported by accident.
 import sys
 
-sys.path.insert(0, "/usr/share/swiftlet")
+sys.path.insert(0, "/usr/share/deepin-speedtest")
 
-from swiftlet.__main__ import main  # noqa: E402
+from deepin_speedtest.__main__ import main  # noqa: E402
 
 sys.exit(main())
