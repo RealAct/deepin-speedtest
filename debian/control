@@ -1,0 +1,35 @@
+Source: swiftlet
+Section: net
+Priority: optional
+Maintainer: RealAct <8281482+RealAct@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 12),
+               dh-python,
+               python3 (>= 3.8),
+               openssl <!nocheck>,
+               python3-pytest <!nocheck>,
+               python3-pyqt5 <!nocheck>
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://github.com/RealAct/deepin-speedtest
+Vcs-Browser: https://github.com/RealAct/deepin-speedtest
+Vcs-Git: https://github.com/RealAct/deepin-speedtest.git
+
+Package: swiftlet
+Architecture: all
+Depends: ${misc:Depends},
+         ${python3:Depends},
+         python3 (>= 3.8),
+         python3-pyqt5,
+         ca-certificates
+Description: open, private internet speed test for Linux desktops
+ Swiftlet measures latency, jitter, download and upload speed with a clean
+ Qt desktop interface (it fits the Deepin desktop and works on any Debian
+ based distribution) and a command-line mode.
+ .
+ Tests use the open ndt7 protocol against the public Measurement Lab (M-Lab)
+ servers or a self-hosted ndt7 server, or a self-hosted LibreSpeed server.
+ Results are kept in a local history that can be exported to CSV.
+ .
+ Security and privacy: no telemetry, no root, TLS with certificate
+ verification for every connection, and network measurements run in a
+ separate process sandboxed with Landlock and resource limits.

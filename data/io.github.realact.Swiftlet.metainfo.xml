@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.realact.Swiftlet</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Swiftlet</name>
+  <summary>Open, private internet speed test</summary>
+  <description>
+    <p>
+      Swiftlet measures latency, jitter, download and upload speed using the open
+      ndt7 protocol (public M-Lab servers or your own) or a self-hosted LibreSpeed server.
+      It has no telemetry and keeps its result history only on your computer.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.realact.Swiftlet.desktop</launchable>
+  <url type="homepage">https://github.com/RealAct/deepin-speedtest</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-14"/>
+  </releases>
+</component>
