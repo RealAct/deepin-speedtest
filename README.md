@@ -23,7 +23,7 @@ sudo apt install ./swiftlet_0.1.0_all.deb
 ```
 
 Dependencies come from your distribution's own repositories (`python3`, `python3-pyqt5`,
-`ca-certificates`), so they receive the distribution's security updates. Supported: Debian 11+,
+`ca-certificates`), so they receive the distribution's security updates. Supported: Debian 12+ (Debian 11 is end-of-life but should still work),
 Ubuntu 20.04+, Linux Mint 20+, Deepin 20.9/23 (Python ≥ 3.8, Qt 5).
 
 ### Build from source

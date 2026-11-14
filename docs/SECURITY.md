@@ -56,7 +56,7 @@ connection (`swiftlet/hardening.py`):
   `LD_PRELOAD`, `SSL_CERT_FILE` or `https_proxy` cannot change its behaviour.
 * The UI kills the engine on a protocol error, an oversized message, or after a 2-minute watchdog.
 
-On kernels without Landlock (for example Debian 11's 5.10), the rest still applies and the
+On kernels without Landlock (for example the 5.10 kernel of the end-of-life Debian 11), the rest still applies and the
 *About* dialog shows which protections are active.
 
 ### TLS and protocol handling
@@ -105,7 +105,7 @@ All untrusted input goes through `swiftlet/validate.py` or `swiftlet/protocol.py
 * **No seccomp filter yet.** Python's standard library has no seccomp bindings, and adding
   libseccomp would add a dependency. Landlock plus resource limits cover file and network access.
 * **AppArmor profile:** not shipped yet. An enforced profile for the engine would add protection
-  on kernels without Landlock (Debian 11), but it needs testing on each distribution first.
+  on kernels without Landlock (such as Debian 11), but it needs testing on each distribution first.
 * **The UI process is not sandboxed** beyond the hardening above, because Qt needs broad access
   (fonts, themes, input methods, file dialogs). It never parses network data.
 * **Flatpak / Linglong** packaging would add namespace isolation and is a natural next step for

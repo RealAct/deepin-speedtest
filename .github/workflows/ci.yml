@@ -17,8 +17,8 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - debian:11      # Python 3.9
           - debian:12      # Python 3.11, base of Deepin 23
+          - debian:13      # Python 3.13, current stable
           - ubuntu:20.04   # Python 3.8, base of Linux Mint 20
           - ubuntu:22.04   # Linux Mint 21
           - ubuntu:24.04   # Linux Mint 22
