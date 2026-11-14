@@ -1,3 +1,12 @@
+deepin-speedtest (1.0.2) unstable; urgency=medium
+
+  * Fix a crash when pressing "Start test" (a Qt signal was named "event",
+    which shadowed QObject.event()).
+  * An unexpected internal error no longer aborts the app.
+  * Remove the focus frame around the tab buttons.
+
+ -- RealAct <8281482+RealAct@users.noreply.github.com>  Sat, 14 Nov 2026 18:40:00 +0000
+
 deepin-speedtest (1.0.1) unstable; urgency=medium
 
   * Rename the app, package and command from Swiftlet/swiftlet to
