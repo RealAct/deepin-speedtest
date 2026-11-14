@@ -1,5 +1,12 @@
+swiftlet (1.0.0) unstable; urgency=medium
+
+  * First public release.
+  * Release workflow attaches the .deb and SHA256SUMS to GitHub releases.
+
+ -- RealAct <8281482+RealAct@users.noreply.github.com>  Sat, 14 Nov 2026 17:30:00 +0000
+
 swiftlet (0.1.0) unstable; urgency=medium
 
-  * Initial release.
+  * Initial version.
 
  -- RealAct <8281482+RealAct@users.noreply.github.com>  Sat, 14 Nov 2026 16:00:00 +0000
