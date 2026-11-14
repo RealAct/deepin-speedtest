@@ -1,3 +1,16 @@
+deepin-speedtest (1.1.0) unstable; urgency=medium
+
+  * New Options window: choose the public server network (M-Lab or the
+    LibreSpeed public servers) and a speed range of up to 5 Gbit/s.
+  * LibreSpeed public servers: found from the project's server list, with
+    the nearest ones picked automatically.
+  * High-speed mode above 1 Gbit/s: wider dial, and more parallel
+    connections and larger transfers for LibreSpeed tests.
+  * About window: author line and a Credits tab.
+  * The Start button is drawn by the app, removing the dark corners.
+
+ -- RealAct <8281482+RealAct@users.noreply.github.com>  Sat, 14 Nov 2026 19:15:00 +0000
+
 deepin-speedtest (1.0.2) unstable; urgency=medium
 
   * Fix a crash when pressing "Start test" (a Qt signal was named "event",

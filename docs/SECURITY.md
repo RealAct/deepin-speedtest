@@ -21,7 +21,7 @@ trusted, but their contents are still validated.
 │  - no network access                   - Landlock: no file writes, no exec,    │
 │  - umask 077, not dumpable,              reads limited to system dirs,         │
 │    no core dumps, no_new_privs           TCP connect only to needed ports      │
-│  - validates every engine event ◄──────- RLIMIT_FSIZE=0, NOFILE=64, AS=2GiB   │
+│  - validates every engine event ◄──────- RLIMIT_FSIZE=0, NOFILE=128, AS=2GiB   │
 │    (size, type, range, charset)  JSON  - python3 -I, empty environment, cwd=/ │
 │  - history: SQLite 0600          lines - strict WebSocket/TLS client ──────────┼──► wss:// / https://
 │  - settings: JSON 0600, atomic         - kills itself on protocol violations   │
@@ -50,7 +50,7 @@ connection (`deepin_speedtest/hardening.py`):
     TCP), and no `bind`.
   * scoping (ABI ≥ 6): no abstract UNIX sockets and no signals to processes outside the sandbox.
 * **Resource limits:** `RLIMIT_FSIZE=0` (cannot write regular files even without Landlock),
-  `RLIMIT_NOFILE=64`, `RLIMIT_AS=2 GiB`.
+  `RLIMIT_NOFILE=128`, `RLIMIT_AS=2 GiB`.
 * **Isolated interpreter:** `python3 -I` ignores `PYTHON*` variables, the user site directory and
   the working directory. The environment is replaced by a minimal one, so variables such as
   `LD_PRELOAD`, `SSL_CERT_FILE` or `https_proxy` cannot change its behaviour.

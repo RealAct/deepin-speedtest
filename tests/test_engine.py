@@ -71,7 +71,14 @@ def test_librespeed(certs, monkeypatch):
     try:
         down = librespeed.download(base, lambda e: None, ssl_context=client_context(certs[0]))
         up = librespeed.upload(base, lambda e: None, ssl_context=client_context(certs[0]))
+        fast = librespeed.download(base, lambda e: None, ssl_context=client_context(certs[0]),
+                                   path="backend/garbage.php", high_speed=True)
+        fast_up = librespeed.upload(base, lambda e: None, ssl_context=client_context(certs[0]),
+                                    path="backend/empty.php", high_speed=True)
+        with pytest.raises(OSError):
+            librespeed.download(base, lambda e: None, ssl_context=client_context(certs[0]), path="nope.php")
     finally:
         srv.shutdown()
     assert down["download_mbps"] > 1
     assert up["upload_mbps"] > 1
+    assert fast["download_mbps"] > 1 and fast_up["upload_mbps"] > 1

@@ -12,7 +12,12 @@ def emit(ev):
 
 
 emit({"type": "sandbox", "landlock_abi": 4, "no_new_privs": True})
-if req["op"] == "locate":
+if req["op"] == "locate" and req.get("network") == "librespeed":
+    emit({"type": "servers", "servers": [{
+        "backend": "librespeed", "custom": False, "id": "librespeed:https://fra.speed.example.org/",
+        "name": "Frankfurt, Germany", "host": "fra.speed.example.org", "provider": "LibreSpeed · Example",
+        "base_url": "https://fra.speed.example.org/", "dl_path": "garbage.php", "ul_path": "empty.php"}]})
+elif req["op"] == "locate":
     emit({"type": "servers", "servers": [{
         "backend": "ndt7", "id": "mlab1-ams03.mlab-oti.measurement-lab.org", "name": "Amsterdam, NL",
         "host": "mlab1-ams03.mlab-oti.measurement-lab.org", "provider": "M-Lab",

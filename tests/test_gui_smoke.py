@@ -102,12 +102,18 @@ def test_dialogs_and_history_actions(window, monkeypatch, tmp_path):
     from PyQt5.QtWidgets import QFileDialog, QMessageBox
     from deepin_speedtest.app import AddServerDialog
 
-    shown = []
-    monkeypatch.setattr(QMessageBox, "about", lambda *a: shown.append(a[2]))
-    window.show_about()
+    from PyQt5.QtWidgets import QLabel
+    from deepin_speedtest.app import AboutDialog
+
     window.sandbox_info = {"landlock_abi": 0, "no_new_privs": True}
+    about = AboutDialog(window._sandbox_text(), window)
+    texts = [[label.text() for label in about.tabs.widget(i).findChildren(QLabel)] for i in range(2)]
+    assert about.tabs.tabText(1) == "Credits"
+    assert "Created by Eli Linares for https://deepinenespañol.org" in texts[0][0]
+    assert "Landlock unavailable" in texts[0][0]
+    assert "Created by Eli Linares<br><br>https://realact.net" in texts[1][0]
+    monkeypatch.setattr(AboutDialog, "exec_", lambda self: 0)
     window.show_about()
-    assert len(shown) == 2 and "Landlock unavailable" in shown[1]
 
     for kind, address, ok in ((0, "speed.example.org:4443", True), (0, "http://x.example.org", False),
                               (1, "https://speed.example.org/ls", True), (1, "http://speed.example.org", False)):
@@ -141,3 +147,50 @@ def test_dialogs_and_history_actions(window, monkeypatch, tmp_path):
     window.clear_history()
     window._switch_page(1)
     window.gauge.repaint()
+
+
+def test_options_switch_network_and_speed_range(window, monkeypatch):
+    import sys
+    from PyQt5.QtWidgets import QApplication, QDialog
+    import deepin_speedtest.app as appmod
+    from deepin_speedtest.app import OptionsDialog
+    from deepin_speedtest.storage import Settings
+
+    def choose(self):
+        self.radio_librespeed.setChecked(True)
+        self.speed.setCurrentIndex(self.speed.findData(5000))
+        self._accept()
+        return QDialog.Accepted
+
+    monkeypatch.setattr(OptionsDialog, "exec_", choose)
+    window.show_options()
+    assert window.settings["network"] == "librespeed" and window.settings["max_speed"] == 5000
+    assert "LibreSpeed" in window.server_combo.itemText(0)
+    assert window.gauge._ticks[-1] == 5000
+    saved = Settings()
+    assert saved["network"] == "librespeed" and saved["max_speed"] == 5000
+
+    # A LibreSpeed test needs no M-Lab consent and runs through the engine.
+    fake = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_engine.py")
+    monkeypatch.setattr(appmod, "engine_command", lambda: [sys.executable, "-I", fake])
+    assert window.settings["mlab_consent"] is False
+    window.start_btn.click()
+    assert _wait(QApplication.instance(), lambda: window.table.rowCount() == 1 and window.run is None)
+    assert "Frankfurt" in window.status.text()
+    assert window.history.rows()[0]["backend"] == "librespeed"
+
+
+def test_start_button_paints_and_gauge_scales():
+    from PyQt5.QtWidgets import QApplication
+    from deepin_speedtest.gauge import SCALES, PillButton, tick_label, value_to_fraction
+
+    app = QApplication.instance() or QApplication([])
+    button = PillButton("Start test")
+    button.resize(200, 48)
+    image = button.grab().toImage()
+    assert image.pixelColor(0, 0) != image.pixelColor(100, 24)   # corners are not filled
+    assert image.pixelColor(100, 6) == image.pixelColor(30, 24)  # pill body is one flat colour
+    assert tick_label(2500) == "2.5G" and tick_label(5000) == "5G" and tick_label(500) == "500"
+    assert value_to_fraction(5000, SCALES[5000]) == 1.0
+    assert 0.8 < value_to_fraction(2000, SCALES[5000]) < 1.0
+    app.processEvents()

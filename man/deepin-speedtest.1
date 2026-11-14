@@ -1,4 +1,4 @@
-.TH DEEPIN-SPEEDTEST 1 "November 2026" "deepin-speedtest 1.0.2" "User Commands"
+.TH DEEPIN-SPEEDTEST 1 "November 2026" "deepin-speedtest 1.1.0" "User Commands"
 .SH NAME
 deepin-speedtest \- open, private internet speed test
 .SH SYNOPSIS
@@ -22,7 +22,13 @@ in a separate, sandboxed process. Deepin Speedtest refuses to run as root.
 .SH OPTIONS
 .TP
 .B \-\-list\-servers
-List nearby M-Lab servers.
+List nearby public servers.
+.TP
+.BI \-\-network " mlab|librespeed"
+Public server network to use. The default is the one chosen in Options.
+.TP
+.B \-\-high\-speed
+Tune the test for lines faster than 1 Gbit/s.
 .TP
 .BI \-\-ndt7\-server " HOST[:PORT]"
 Test against a self-hosted ndt7 server (wss:// only).

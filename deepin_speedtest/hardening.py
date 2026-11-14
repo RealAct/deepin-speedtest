@@ -189,7 +189,7 @@ def sandbox_engine(tcp_ports: Iterable[int]) -> Dict[str, object]:
     report: Dict[str, object] = dict(harden_process())
     limits = {
         "RLIMIT_FSIZE": (0, 0),             # cannot write to any regular file
-        "RLIMIT_NOFILE": (64, 64),
+        "RLIMIT_NOFILE": (128, 128),
         "RLIMIT_AS": (2 << 30, 2 << 30),   # 2 GiB of address space
     }
     for name, value in limits.items():

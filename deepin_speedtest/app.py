@@ -17,11 +17,12 @@ from PyQt5.QtGui import QColor, QFont, QIcon, QPalette
 from PyQt5.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QComboBox, QDialog,
                              QDialogButtonBox, QFileDialog, QFormLayout, QFrame, QGridLayout,
                              QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
-                             QPushButton, QStackedWidget, QTableWidget, QTableWidgetItem,
+                             QPushButton, QRadioButton, QStackedWidget, QTabWidget, QTableWidget,
+                             QTableWidgetItem,
                              QVBoxLayout, QWidget)
 
 from . import APP_ID, APP_NAME, __version__, hardening
-from .gauge import SpeedGauge
+from .gauge import PillButton, SpeedGauge
 from .protocol import (MAX_LINE, engine_command, engine_environment, request_line, validate_event,
                        validate_server)
 from .storage import History, Settings, export_csv
@@ -44,6 +45,27 @@ MLAB_NOTICE = (
 )
 
 
+NETWORK_NAMES = {"mlab": "M-Lab", "librespeed": "LibreSpeed"}
+
+ABOUT_HTML = (
+    "<h3>%s %s</h3>"
+    "<p>Created by Eli Linares for https://deepinenespañol.org</p>"
+    "<p>An open-source internet speed test for Deepin and other Debian-based desktops.</p>"
+    "<p>Measures latency, jitter, download and upload using the open ndt7 protocol "
+    "(M-Lab or self-hosted) or LibreSpeed servers (public or self-hosted).</p>"
+    "<p><b>Privacy:</b> no telemetry, no accounts. History is stored only on this computer.</p>"
+    "<p><b>Engine sandbox:</b> %s</p>"
+    "<p>A community project. Not affiliated with Deepin Technology, Ookla® or Speedtest®.</p>"
+)
+
+CREDITS_HTML = (
+    "<h3>Credits</h3>"
+    "<p>Created by Eli Linares<br><br>https://realact.net</p>"
+    "<p>Test servers: Measurement Lab (M-Lab) and the LibreSpeed project and its "
+    "volunteer server operators.</p>"
+)
+
+
 # -- engine process ----------------------------------------------------------
 
 class EngineRun(QObject):
@@ -53,7 +75,8 @@ class EngineRun(QObject):
     message = pyqtSignal(dict)
     done = pyqtSignal()
 
-    def __init__(self, op: str, server: Optional[Dict[str, Any]] = None, parent=None) -> None:
+    def __init__(self, op: str, server: Optional[Dict[str, Any]] = None, parent=None, *,
+                 network: str = "mlab", high_speed: bool = False) -> None:
         super().__init__(parent)
         self._buf = QByteArray()
         self._done = False
@@ -71,7 +94,7 @@ class EngineRun(QObject):
         self._watchdog = QTimer(self)
         self._watchdog.setSingleShot(True)
         self._watchdog.timeout.connect(self._timeout)
-        self._request = request_line(op, server)
+        self._request = request_line(op, server, network=network, high_speed=high_speed)
         cmd = engine_command()
         self._proc.start(cmd[0], cmd[1:])
         self._proc.write(self._request)
@@ -196,6 +219,112 @@ class AddServerDialog(QDialog):
         self.accept()
 
 
+def _fit_height(dialog: QDialog) -> None:
+    """Word-wrapped labels need the dialog height computed for its width."""
+    layout = dialog.layout()
+    dialog.setMinimumHeight(layout.totalHeightForWidth(dialog.width()))
+    dialog.resize(dialog.width(), dialog.minimumHeight())
+
+
+class OptionsDialog(QDialog):
+    """Server network and speed range."""
+
+    def __init__(self, network: str, max_speed: int, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Options")
+        self.setFixedWidth(480)
+        self.network = network
+        self.max_speed = max_speed
+        lay = QVBoxLayout(self)
+        lay.setSpacing(10)
+
+        lay.addWidget(self._heading("Public test servers"))
+        self.radio_mlab = QRadioButton("M-Lab (Measurement Lab)")
+        self.radio_librespeed = QRadioButton("LibreSpeed public servers")
+        (self.radio_librespeed if network == "librespeed" else self.radio_mlab).setChecked(True)
+        lay.addWidget(self.radio_mlab)
+        lay.addWidget(self._hint(
+            "Open research platform using the ndt7 protocol, one connection per direction. "
+            "M-Lab publishes every test, including your IP address, as open data."))
+        lay.addWidget(self.radio_librespeed)
+        lay.addWidget(self._hint(
+            "Volunteer-run open-source servers, several parallel connections. Results are not "
+            "published, but the server operator sees your IP address. Best choice for "
+            "multi-gigabit lines."))
+
+        lay.addWidget(self._heading("Maximum speed"))
+        self.speed = QComboBox()
+        for label, value in (("Up to 1 Gbit/s", 1000), ("Up to 2.5 Gbit/s", 2500), ("Up to 5 Gbit/s", 5000)):
+            self.speed.addItem(label, value)
+        self.speed.setCurrentIndex(max(0, self.speed.findData(max_speed)))
+        self.speed.setAccessibleName("Maximum speed")
+        lay.addWidget(self.speed)
+        lay.addWidget(self._hint(
+            "Sets the range of the dial. Above 1 Gbit/s, LibreSpeed tests also use more parallel "
+            "connections and larger transfers. Results depend on the server's own capacity: "
+            "few public servers can deliver 5 Gbit/s."))
+
+        lay.addWidget(self._hint(
+            "Speedtest.net servers are not offered: Ookla does not license them for "
+            "third-party apps. Your own ndt7 or LibreSpeed server can be added with “Add…”."))
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        lay.addWidget(buttons)
+        _fit_height(self)
+
+    @staticmethod
+    def _heading(text: str) -> QLabel:
+        label = QLabel("<b>%s</b>" % text)
+        return label
+
+    @staticmethod
+    def _hint(text: str) -> QLabel:
+        label = QLabel(text)
+        label.setWordWrap(True)
+        label.setObjectName("hint")
+        return label
+
+    def _accept(self) -> None:
+        self.network = "librespeed" if self.radio_librespeed.isChecked() else "mlab"
+        self.max_speed = int(self.speed.currentData())
+        self.accept()
+
+
+class AboutDialog(QDialog):
+    """About and Credits. Links are selectable text, not clickable: the app
+    never starts a browser (or any other program) itself."""
+
+    def __init__(self, sandbox: str, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("About %s" % APP_NAME)
+        self.setFixedWidth(480)
+        lay = QVBoxLayout(self)
+        tabs = QTabWidget()
+        tabs.addTab(self._page(ABOUT_HTML % (APP_NAME, __version__, sandbox)), "About")
+        tabs.addTab(self._page(CREDITS_HTML), "Credits")
+        lay.addWidget(tabs)
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.rejected.connect(self.reject)
+        buttons.accepted.connect(self.accept)
+        lay.addWidget(buttons)
+        self.tabs = tabs
+        _fit_height(self)
+
+    @staticmethod
+    def _page(html: str) -> QWidget:
+        page = QWidget()
+        inner = QVBoxLayout(page)
+        label = QLabel(html)
+        label.setTextFormat(Qt.RichText)
+        label.setWordWrap(True)
+        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        inner.addWidget(label)
+        inner.addStretch(1)
+        return page
+
+
 # -- main window -------------------------------------------------------------
 
 def _fmt(value: Optional[float], digits: int = 1) -> str:
@@ -237,10 +366,10 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(APP_NAME)
-        self.setMinimumSize(460, 640)
+        self.setMinimumSize(520, 640)
         self.settings = Settings()
         self.history = History()
-        self.mlab_servers: List[Dict[str, Any]] = []
+        self.public_servers: List[Dict[str, Any]] = []
         self.run: Optional[EngineRun] = None
         self.current_server: Optional[Dict[str, Any]] = None
         self.sandbox_info: Optional[Dict[str, Any]] = None
@@ -255,6 +384,7 @@ class MainWindow(QMainWindow):
         head = QHBoxLayout()
         brand = QLabel(APP_NAME)
         brand.setObjectName("brand")
+        self.brand = brand
         head.addWidget(brand)
         head.addStretch(1)
         self.nav_group = QButtonGroup(self)
@@ -266,11 +396,12 @@ class MainWindow(QMainWindow):
             self.nav_group.addButton(b, i)
             head.addWidget(b)
         self.nav_group.button(0).setChecked(True)
-        about = QPushButton("About")
-        about.setObjectName("nav")
-        about.setFocusPolicy(Qt.TabFocus)
-        about.clicked.connect(self.show_about)
-        head.addWidget(about)
+        for text, slot in (("Options", self.show_options), ("About", self.show_about)):
+            extra = QPushButton(text)
+            extra.setObjectName("nav")
+            extra.setFocusPolicy(Qt.TabFocus)
+            extra.clicked.connect(slot)
+            head.addWidget(extra)
         outer.addLayout(head)
 
         self.pages = QStackedWidget()
@@ -284,6 +415,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         self._apply_theme()
+        self.brand.ensurePolished()   # never clip the title next to the tab buttons
+        self.brand.setMinimumWidth(self.brand.fontMetrics().boundingRect(APP_NAME).width() + 12)
         self._populate_servers()
         self.refresh_history()
         self.start_btn.setFocus()  # keep initial keyboard focus off the tab buttons
@@ -319,11 +452,8 @@ class MainWindow(QMainWindow):
         self.gauge = SpeedGauge()
         lay.addWidget(self.gauge, 1)
 
-        self.start_btn = QPushButton("Start test")
-        self.start_btn.setObjectName("start")
-        self.start_btn.setCursor(Qt.PointingHandCursor)
+        self.start_btn = PillButton("Start test")
         self.start_btn.clicked.connect(self.toggle_test)
-        self.start_btn.setDefault(True)
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
         btn_row.addWidget(self.start_btn)
@@ -390,18 +520,17 @@ class MainWindow(QMainWindow):
         accent = QColor("#2dd4bf" if dark else "#0d9488")
         accent2 = QColor("#fbbf24" if dark else "#d97706")
         self.gauge.set_colors(accent, accent2)
+        self.gauge.set_max_speed(self.settings["max_speed"])
+        self.start_btn.set_colors(accent, accent.darker(112) if dark else accent.lighter(112),
+                                  QColor("#042f2e" if dark else "#ffffff"))
         card = "rgba(255,255,255,0.06)" if dark else "rgba(0,0,0,0.04)"
         border = "rgba(255,255,255,0.10)" if dark else "rgba(0,0,0,0.08)"
         self.setStyleSheet("""
-            QLabel#brand { font-size: 18pt; font-weight: 700; letter-spacing: 0.5px; }
-            QPushButton#nav { border: none; outline: none; padding: 6px 10px; border-radius: 8px;
+            QLabel#brand { font-size: 15pt; font-weight: 700; }
+            QPushButton#nav { border: none; outline: none; padding: 6px 8px; border-radius: 8px;
                               background: transparent; }
             QPushButton#nav:focus { outline: none; border: none; }
             QPushButton#nav:checked { background: %(card)s; font-weight: 600; }
-            QPushButton#start { min-width: 180px; min-height: 44px; border-radius: 22px;
-                                font-size: 12pt; font-weight: 600; color: %(on_accent)s;
-                                background: %(accent)s; border: none; }
-            QPushButton#start:hover { background: %(accent2)s; }
             QFrame#card { background: %(card)s; border: 1px solid %(border)s; border-radius: 12px; }
             QFrame#card[active="true"] { border: 1px solid %(accent)s; }
             QLabel#cardTitle { font-size: 8pt; font-weight: 600; letter-spacing: 1px; opacity: 0.7; }
@@ -410,18 +539,19 @@ class MainWindow(QMainWindow):
             QLabel#status { font-size: 9pt; }
             QLabel#error { color: #dc2626; }
         """ % {"card": card, "border": border, "accent": accent.name(),
-             "on_accent": "#042f2e" if dark else "#ffffff", "accent2": accent2.darker(110).name()})
+             "accent2": accent2.darker(110).name()})
 
     # -- servers -------------------------------------------------------
 
     def _all_servers(self) -> List[Dict[str, Any]]:
-        return list(self.mlab_servers) + list(self.settings["custom_servers"])
+        return list(self.public_servers) + list(self.settings["custom_servers"])
 
     def _populate_servers(self) -> None:
         self.server_combo.clear()
-        self.server_combo.addItem("Nearest public server (M-Lab, automatic)", AUTO)
-        for s in self.mlab_servers:
-            self.server_combo.addItem("M-Lab · %s" % s["name"], s["id"])
+        network = NETWORK_NAMES[self.settings["network"]]
+        self.server_combo.addItem("Nearest public server (%s, automatic)" % network, AUTO)
+        for s in self.public_servers:
+            self.server_combo.addItem("%s · %s" % (network, s["name"]), s["id"])
         for s in self.settings["custom_servers"]:
             kind = "ndt7" if s["backend"] == "ndt7" else "LibreSpeed"
             self.server_combo.addItem("%s · %s (self-hosted %s)" % (s["name"], s["host"], kind), s["id"])
@@ -446,13 +576,13 @@ class MainWindow(QMainWindow):
             self.status.setText("Could not save settings: %s" % exc.strerror)
 
     def _ensure_consent(self) -> bool:
-        if self.settings["mlab_consent"]:
+        if self.settings["network"] != "mlab" or self.settings["mlab_consent"]:
             return True
         box = QMessageBox(self)
         box.setWindowTitle("Public test servers")
         box.setTextFormat(Qt.RichText)
         box.setText(MLAB_NOTICE)
-        box.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        box.setTextInteractionFlags(Qt.TextSelectableByMouse)
         box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         box.button(QMessageBox.Ok).setText("Use M-Lab servers")
         if box.exec_() != QMessageBox.Ok:
@@ -464,11 +594,11 @@ class MainWindow(QMainWindow):
     def find_servers(self) -> None:
         if self.run is not None or not self._ensure_consent():
             return
-        self.status.setText("Looking up nearby M-Lab servers…")
+        self.status.setText("Looking up nearby %s servers…" % NETWORK_NAMES[self.settings["network"]])
         self._start_engine("locate", None, on_servers=self._servers_found)
 
     def _servers_found(self, servers: List[Dict[str, Any]]) -> None:
-        self.mlab_servers = servers
+        self.public_servers = servers
         self._pending_selection = self.server_combo.currentData()
         self._populate_servers()
         self._pending_selection = None
@@ -513,7 +643,7 @@ class MainWindow(QMainWindow):
         self._set_running(True)
 
         def picked(servers: List[Dict[str, Any]]) -> None:
-            self.mlab_servers = servers
+            self.public_servers = servers
             chosen = next((s for s in servers if s["id"] == sid), servers[0])
             self._populate_servers()
             QTimer.singleShot(0, lambda: self._run_test(chosen))
@@ -535,7 +665,8 @@ class MainWindow(QMainWindow):
 
     def _start_engine(self, op: str, server: Optional[Dict[str, Any]], on_servers=None) -> None:
         self._set_running(True)
-        run = EngineRun(op, server, self)
+        run = EngineRun(op, server, self, network=self.settings["network"],
+                        high_speed=self.settings["max_speed"] > 1000)
         self.run = run
 
         def on_event(ev: Dict[str, Any]) -> None:
@@ -659,23 +790,35 @@ class MainWindow(QMainWindow):
 
     # -- about ---------------------------------------------------------
 
-    def show_about(self) -> None:
+    def _sandbox_text(self) -> str:
         if self.sandbox_info is None:
-            sandbox = "Run a test to see the engine sandbox status."
-        else:
-            abi = self.sandbox_info["landlock_abi"]
-            sandbox = ("Landlock ABI %d active (files, exec%s restricted)" % (
-                abi, ", TCP ports" if abi >= 4 else "") if abi else
-                "Landlock unavailable on this kernel; resource limits and no_new_privs active")
-        QMessageBox.about(self, "About %s" % APP_NAME, (
-            "<h3>%s %s</h3>"
-            "<p>An open-source internet speed test for Deepin and other Debian-based desktops.</p>"
-            "<p>Measures latency, jitter, download and upload using the open "
-            "<a href='https://github.com/m-lab/ndt-server/blob/main/spec/ndt7-protocol.md'>ndt7</a> "
-            "protocol (M-Lab or self-hosted) or a self-hosted LibreSpeed server.</p>"
-            "<p><b>Privacy:</b> no telemetry, no accounts. History is stored only on this computer.</p>"
-            "<p><b>Engine sandbox:</b> %s</p>"
-            "<p>A community project. Not affiliated with Deepin Technology, Ookla® or Speedtest®.</p>") % (APP_NAME, __version__, sandbox))
+            return "Run a test to see the engine sandbox status."
+        abi = self.sandbox_info["landlock_abi"]
+        if abi:
+            return "Landlock ABI %d active (files, exec%s restricted)" % (
+                abi, ", TCP ports" if abi >= 4 else "")
+        return "Landlock unavailable on this kernel; resource limits and no_new_privs active"
+
+    def show_about(self) -> None:
+        AboutDialog(self._sandbox_text(), self).exec_()
+
+    def show_options(self) -> None:
+        if self.run is not None:
+            self.status.setText("Stop the running test before changing options.")
+            return
+        dlg = OptionsDialog(self.settings["network"], self.settings["max_speed"], self)
+        if dlg.exec_() != QDialog.Accepted:
+            return
+        if dlg.network != self.settings["network"]:
+            self.settings["network"] = dlg.network
+            self.public_servers = []          # the list belongs to the other network
+            if not str(self.settings["selected_server"]).startswith("custom:"):
+                self.settings["selected_server"] = AUTO
+        self.settings["max_speed"] = dlg.max_speed
+        self._save_settings()
+        self.gauge.set_max_speed(dlg.max_speed)
+        self._populate_servers()
+        self.status.setText("Options saved.")
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt API
         if self.run is not None:
@@ -711,6 +854,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             pass
 
     sys.excepthook = on_exception
-    win.resize(520, 720)
+    win.resize(600, 760)
     win.show()
     return app.exec_()
