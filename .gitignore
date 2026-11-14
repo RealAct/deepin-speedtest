@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+debian/.debhelper/
+debian/swiftlet/
+debian/files
+debian/*.substvars
+debian/*.debhelper.log
+debian/debhelper-build-stamp
+/dist/
