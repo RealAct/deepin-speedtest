@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QCom
                              QTableWidgetItem,
                              QVBoxLayout, QWidget)
 
-from . import APP_ID, APP_NAME, __version__, hardening
+from . import APP_ID, APP_NAME, __version__, hardening, links
 from .gauge import PillButton, SpeedGauge
 from .protocol import (MAX_LINE, engine_command, engine_environment, request_line, validate_event,
                        validate_server)
@@ -49,7 +49,7 @@ NETWORK_NAMES = {"mlab": "M-Lab", "librespeed": "LibreSpeed"}
 
 ABOUT_HTML = (
     "<h3>%s %s</h3>"
-    "<p>Created by Eli Linares for https://deepinenespañol.org</p>"
+    "<p>Created by Eli Linares for %s</p>"
     "<p>An open-source internet speed test for Deepin and other Debian-based desktops.</p>"
     "<p>Measures latency, jitter, download and upload using the open ndt7 protocol "
     "(M-Lab or self-hosted) or LibreSpeed servers (public or self-hosted).</p>"
@@ -60,7 +60,7 @@ ABOUT_HTML = (
 
 CREDITS_HTML = (
     "<h3>Credits</h3>"
-    "<p>Created by Eli Linares<br><br>https://realact.net</p>"
+    "<p>Created by Eli Linares<br><br>%s</p>"
     "<p>Test servers: Measurement Lab (M-Lab) and the LibreSpeed project and its "
     "volunteer server operators.</p>"
 )
@@ -292,8 +292,8 @@ class OptionsDialog(QDialog):
 
 
 class AboutDialog(QDialog):
-    """About and Credits. Links are selectable text, not clickable: the app
-    never starts a browser (or any other program) itself."""
+    """About and Credits. The two links open in the user's browser; only the
+    fixed addresses in ``links.LINKS`` can be opened (see ``links.py``)."""
 
     def __init__(self, sandbox: str, parent=None) -> None:
         super().__init__(parent)
@@ -301,8 +301,9 @@ class AboutDialog(QDialog):
         self.setFixedWidth(480)
         lay = QVBoxLayout(self)
         tabs = QTabWidget()
-        tabs.addTab(self._page(ABOUT_HTML % (APP_NAME, __version__, sandbox)), "About")
-        tabs.addTab(self._page(CREDITS_HTML), "Credits")
+        tabs.addTab(self._page(ABOUT_HTML % (
+            APP_NAME, __version__, links.anchor("https://deepinenespañol.org"), sandbox)), "About")
+        tabs.addTab(self._page(CREDITS_HTML % links.anchor("https://realact.net")), "Credits")
         lay.addWidget(tabs)
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.reject)
@@ -311,18 +312,26 @@ class AboutDialog(QDialog):
         self.tabs = tabs
         _fit_height(self)
 
-    @staticmethod
-    def _page(html: str) -> QWidget:
+    def _page(self, html: str) -> QWidget:
         page = QWidget()
         inner = QVBoxLayout(page)
         label = QLabel(html)
         label.setTextFormat(Qt.RichText)
         label.setWordWrap(True)
-        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        # Links are handled by _open_link, never by Qt itself.
+        label.setOpenExternalLinks(False)
+        label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        label.linkActivated.connect(self._open_link)
         label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         inner.addWidget(label)
         inner.addStretch(1)
         return page
+
+    def _open_link(self, url: str) -> None:
+        if not links.open_link(url):
+            QMessageBox.information(
+                self, APP_NAME,
+                "The link could not be opened. Copy it into your browser instead:\n\n%s" % url)
 
 
 # -- main window -------------------------------------------------------------

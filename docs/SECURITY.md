@@ -106,6 +106,10 @@ All untrusted input goes through `deepin_speedtest/validate.py` or `deepin_speed
   libseccomp would add a dependency. Landlock plus resource limits cover file and network access.
 * **AppArmor profile:** not shipped yet. An enforced profile for the engine would add protection
   on kernels without Landlock (such as Debian 11), but it needs testing on each distribution first.
+* **Links in the About window:** the two links (the author's sites) are the only thing the UI
+  ever opens outside the app. They are fixed in `deepin_speedtest/links.py`, are passed to the
+  desktop portal over D-Bus (or to `/usr/bin/xdg-open` when there is no portal), without a shell,
+  and no address from a server, the network or the settings file can reach that code.
 * **The UI process is not sandboxed** beyond the hardening above, because Qt needs broad access
   (fonts, themes, input methods, file dialogs). It never parses network data.
 * **Flatpak / Linglong** packaging would add namespace isolation and is a natural next step for
