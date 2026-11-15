@@ -22,7 +22,7 @@ Download `deepin-speedtest_<version>_all.deb` (and `SHA256SUMS`) from the
 
 ```sh
 sha256sum -c --ignore-missing SHA256SUMS
-sudo apt install ./deepin-speedtest_1.1.1_all.deb
+sudo apt install ./deepin-speedtest_1.2.0_all.deb
 ```
 
 The same package works on every supported distribution (it is `Architecture: all`).
@@ -42,7 +42,7 @@ Ubuntu 20.04+, Linux Mint 20+, Deepin 20.9/23 (Python ≥ 3.8, Qt 5).
 
 ```sh
 sudo apt install build-essential debhelper dh-python python3 python3-pyqt5 python3-pytest openssl
-dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../deepin-speedtest_1.1.1_all.deb
+dpkg-buildpackage -us -uc -b      # runs the test suite, produces ../deepin-speedtest_1.2.0_all.deb
 ```
 
 Run without installing: `python3 -m deepin_speedtest` (desktop) or `python3 -m deepin_speedtest --cli`.
@@ -62,6 +62,16 @@ Run without installing: `python3 -m deepin_speedtest` (desktop) or `python3 -m d
   deepin-speedtest --cli --ndt7-server speed.example.org:4443
   deepin-speedtest --cli --librespeed https://speed.example.org/ --json
   ```
+
+## Languages
+
+Deepin Speedtest is available in **English** and **Spanish**. It uses Spanish when the system
+language is Spanish (for example `LANG=es_ES.UTF-8`) and English otherwise. To try the other
+language once, start it from a terminal: `LANGUAGE=es deepin-speedtest` or
+`LANGUAGE=en deepin-speedtest`.
+
+The texts are in `deepin_speedtest/i18n.py`. A test checks that every text shown to the user has
+a translation.
 
 ## Test servers (backends)
 

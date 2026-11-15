@@ -9,6 +9,8 @@ from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt5.QtGui import QColor, QConicalGradient, QFont, QPainter, QPen
 from PyQt5.QtWidgets import QPushButton, QSizePolicy, QWidget
 
+from .i18n import tr
+
 # Piecewise scale so that both 5 Mbit/s and 900 Mbit/s are readable.
 TICKS: List[float] = [0, 5, 10, 25, 50, 100, 250, 500, 1000]
 SCALES = {
@@ -46,13 +48,13 @@ class SpeedGauge(QWidget):
         self._shown = 0.0
         self._ticks = TICKS
         self._unit = "Mbit/s"
-        self._caption = "Ready"
+        self._caption = tr("Ready")
         self._accent = QColor("#14b8a6")
         self._accent2 = QColor("#f59e0b")
         self._timer = QTimer(self)
         self._timer.setInterval(16)
         self._timer.timeout.connect(self._step)
-        self.setAccessibleName("Speed gauge")
+        self.setAccessibleName(tr("Speed gauge"))
 
     def set_colors(self, accent: QColor, accent2: QColor) -> None:
         self._accent, self._accent2 = accent, accent2

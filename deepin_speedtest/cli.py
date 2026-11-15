@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlsplit
 
 from . import APP_NAME, __version__, hardening
+from .i18n import tr
 from .protocol import run_engine, validate_server
 from .storage import History, Settings
 from .validate import ValidationError, parse_server_address, validate_https_base
@@ -43,13 +44,13 @@ def _custom_server(args: argparse.Namespace) -> Optional[Dict[str, Any]]:
 def _consent(settings: Settings, assume_yes: bool) -> bool:
     if settings["mlab_consent"]:
         return True
-    sys.stderr.write(NOTICE)
+    sys.stderr.write(tr(NOTICE))
     if not assume_yes:
         if not sys.stdin.isatty():
-            sys.stderr.write("Re-run with --accept-mlab-privacy to continue.\n")
+            sys.stderr.write(tr("Re-run with --accept-mlab-privacy to continue.\n"))
             return False
-        answer = input("Continue with M-Lab servers? [y/N] ").strip().lower()
-        if answer not in ("y", "yes"):
+        answer = input(tr("Continue with M-Lab servers? [y/N] ")).strip().lower()
+        if answer not in ("y", "yes", "s", "si", "sí"):
             return False
     settings["mlab_consent"] = True
     try:
@@ -57,6 +58,10 @@ def _consent(settings: Settings, assume_yes: bool) -> bool:
     except OSError:
         pass
     return True
+
+
+def _phase(phase: str) -> str:
+    return {"ping": tr("Ping"), "download": tr("Download"), "upload": tr("Upload")}.get(phase, phase)
 
 
 def _collect(op: str, server: Optional[Dict[str, Any]], quiet: bool, network: str = "mlab",
@@ -67,9 +72,9 @@ def _collect(op: str, server: Optional[Dict[str, Any]], quiet: bool, network: st
         if quiet:
             continue
         if ev["type"] == "stage":
-            sys.stderr.write("\n%-9s" % ev["phase"].capitalize())
+            sys.stderr.write("\n%-9s" % _phase(ev["phase"]))
         elif ev["type"] == "progress" and ev["phase"] != "ping":
-            sys.stderr.write("\r%-9s %8.1f Mbit/s" % (ev["phase"].capitalize(), ev["value"]))
+            sys.stderr.write("\r%-9s %8.1f Mbit/s" % (_phase(ev["phase"]), ev["value"]))
         sys.stderr.flush()
     if not quiet:
         sys.stderr.write("\n")
@@ -79,25 +84,25 @@ def _collect(op: str, server: Optional[Dict[str, Any]], quiet: bool, network: st
 def main(argv: Optional[List[str]] = None) -> int:
     hardening.refuse_root()
     hardening.harden_process()
-    p = argparse.ArgumentParser(prog="deepin-speedtest --cli", description="%s %s command-line speed test" % (
+    p = argparse.ArgumentParser(prog="deepin-speedtest --cli", description=tr("%s %s command-line speed test") % (
         APP_NAME, __version__))
-    p.add_argument("--list-servers", action="store_true", help="list nearby public servers")
+    p.add_argument("--list-servers", action="store_true", help=tr("list nearby public servers"))
     p.add_argument("--network", choices=("mlab", "librespeed"),
-                   help="public server network (default: the one chosen in Options, else mlab)")
+                   help=tr("public server network (default: the one chosen in Options, else mlab)"))
     p.add_argument("--high-speed", action="store_true",
-                   help="tune for lines faster than 1 Gbit/s (more parallel streams with LibreSpeed)")
-    p.add_argument("--ndt7-server", metavar="HOST[:PORT]", help="use a self-hosted ndt7 server")
-    p.add_argument("--librespeed", metavar="URL", help="use a self-hosted LibreSpeed server (https://...)")
-    p.add_argument("--json", action="store_true", help="print the result as JSON")
-    p.add_argument("--no-save", action="store_true", help="do not add the result to the history")
-    p.add_argument("--accept-mlab-privacy", action="store_true", help="accept the M-Lab data notice")
+                   help=tr("tune for lines faster than 1 Gbit/s (more parallel streams with LibreSpeed)"))
+    p.add_argument("--ndt7-server", metavar="HOST[:PORT]", help=tr("use a self-hosted ndt7 server"))
+    p.add_argument("--librespeed", metavar="URL", help=tr("use a self-hosted LibreSpeed server (https://...)"))
+    p.add_argument("--json", action="store_true", help=tr("print the result as JSON"))
+    p.add_argument("--no-save", action="store_true", help=tr("do not add the result to the history"))
+    p.add_argument("--accept-mlab-privacy", action="store_true", help=tr("accept the M-Lab data notice"))
     args = p.parse_args(argv)
 
     settings = Settings()
     try:
         server = _custom_server(args)
     except ValidationError as exc:
-        p.error(str(exc))
+        p.error(tr(str(exc)))
         return 2
     network = args.network or settings["network"]
     high_speed = args.high_speed or settings["max_speed"] > 1000
@@ -108,7 +113,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         events = _collect("locate", None, quiet=True, network=network)
         last = events[-1] if events else {"type": "error", "message": "no answer from engine"}
         if last["type"] != "servers":
-            sys.stderr.write("error: %s\n" % last.get("message"))
+            sys.stderr.write(tr("error: %s\n") % tr(str(last.get("message"))))
             return 1
         for s in last["servers"]:
             print("%-45s %s" % (s["host"], s["name"]))
@@ -118,17 +123,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         events = _collect("locate", None, quiet=True, network=network)
         last = events[-1] if events else {"type": "error", "message": "no answer from engine"}
         if last["type"] != "servers":
-            sys.stderr.write("error: %s\n" % last.get("message"))
+            sys.stderr.write(tr("error: %s\n") % tr(str(last.get("message"))))
             return 1
         server = last["servers"][0]
         if not args.json:
-            sys.stderr.write("Server: %s (%s)\n" % (server["name"], server["host"]))
+            sys.stderr.write(tr("Server: %s (%s)\n") % (server["name"], server["host"]))
 
     events = _collect("run", server, quiet=args.json, high_speed=high_speed)
     result = next((e for e in events if e["type"] == "result"), None)
     if result is None:
         err = next((e for e in events if e["type"] == "error"), {"message": "test failed"})
-        sys.stderr.write("error: %s\n" % err["message"])
+        sys.stderr.write(tr("error: %s\n") % tr(err["message"]))
         return 1
     if not args.no_save:
         try:
@@ -141,7 +146,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         out["server"] = {"name": server["name"], "backend": server["backend"]}
         print(json.dumps(out, indent=2))
     else:
-        print("Ping      %8.1f ms   (jitter %.1f ms)" % (result["ping_ms"], result["jitter_ms"]))
-        print("Download  %8.1f Mbit/s" % result["download_mbps"])
-        print("Upload    %8.1f Mbit/s" % result["upload_mbps"])
+        print("%-9s %8.1f ms   (%s %.1f ms)" % (
+            tr("Ping"), result["ping_ms"], tr("jitter"), result["jitter_ms"]))
+        print("%-9s %8.1f Mbit/s" % (tr("Download"), result["download_mbps"]))
+        print("%-9s %8.1f Mbit/s" % (tr("Upload"), result["upload_mbps"]))
     return 0

@@ -1,3 +1,12 @@
+deepin-speedtest (1.2.0) unstable; urgency=medium
+
+  * Spanish translation of the desktop app, the terminal mode and the
+    launcher entry. Spanish is used when the system language is Spanish,
+    English otherwise.
+  * The window header no longer squeezes its buttons when labels are long.
+
+ -- RealAct <8281482+RealAct@users.noreply.github.com>  Sun, 15 Nov 2026 23:10:00 +0000
+
 deepin-speedtest (1.1.1) unstable; urgency=medium
 
   * The links in the About and Credits tabs are now clickable and open in

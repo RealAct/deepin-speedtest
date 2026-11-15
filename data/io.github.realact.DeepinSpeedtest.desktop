@@ -2,11 +2,14 @@
 Type=Application
 Name=Deepin Speedtest
 GenericName=Internet Speed Test
+GenericName[es]=Prueba de velocidad de internet
 Comment=Measure your internet speed, latency and jitter with open servers
+Comment[es]=Mide la velocidad, la latencia y el jitter de tu conexión con servidores abiertos
 Exec=deepin-speedtest
 Icon=io.github.realact.DeepinSpeedtest
 Terminal=false
 Categories=Network;Utility;Monitor;
 Keywords=speed;speedtest;bandwidth;internet;ping;latency;jitter;ndt7;librespeed;
+Keywords[es]=velocidad;prueba de velocidad;ancho de banda;internet;ping;latencia;jitter;ndt7;librespeed;
 StartupNotify=true
 StartupWMClass=deepin-speedtest
