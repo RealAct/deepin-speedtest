@@ -12,8 +12,9 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import QByteArray, QObject, QProcess, QProcessEnvironment, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QFont, QIcon, QPalette
+from PyQt5.QtCore import (QByteArray, QLibraryInfo, QObject, QProcess, QProcessEnvironment, Qt, QTimer,
+                          QTranslator, pyqtSignal)
+from PyQt5.QtGui import QColor, QFont, QFontMetrics, QIcon, QPalette
 from PyQt5.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QComboBox, QDialog,
                              QDialogButtonBox, QFileDialog, QFormLayout, QFrame, QGridLayout,
                              QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
@@ -21,7 +22,8 @@ from PyQt5.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QCom
                              QTableWidgetItem,
                              QVBoxLayout, QWidget)
 
-from . import APP_ID, APP_NAME, __version__, hardening, links
+from . import APP_ID, APP_NAME, __version__, hardening, i18n, links
+from .i18n import tr
 from .gauge import PillButton, SpeedGauge
 from .protocol import (MAX_LINE, engine_command, engine_environment, request_line, validate_event,
                        validate_server)
@@ -107,14 +109,14 @@ class EngineRun(QObject):
             idx = self._buf.indexOf(b"\n")
             if idx < 0:
                 if self._buf.size() > MAX_LINE:
-                    self._fail("Engine sent an oversized message.")
+                    self._fail(tr("Engine sent an oversized message."))
                 break
             line = bytes(self._buf.left(idx))
             self._buf.remove(0, idx + 1)
             try:
                 ev = validate_event(line)
             except ValidationError as exc:
-                self._fail("Engine protocol error: %s" % exc)
+                self._fail(tr("Engine protocol error: %s") % exc)
                 return
             self.message.emit(ev)
             if ev["type"] == "error":
@@ -127,18 +129,18 @@ class EngineRun(QObject):
         self.cancel()
 
     def _timeout(self) -> None:
-        self._fail("The test took too long and was stopped.")
+        self._fail(tr("The test took too long and was stopped."))
 
     def _on_error(self, err) -> None:
         if err == QProcess.FailedToStart:
-            self._fail("Could not start the measurement engine.")
+            self._fail(tr("Could not start the measurement engine."))
 
     def _on_finished(self, code: int, _status) -> None:
         self._watchdog.stop()
         self._read()
         if code != 0 and not self._done:
             self._done = True
-            self.message.emit({"type": "error", "message": "The measurement engine stopped unexpectedly."})
+            self.message.emit({"type": "error", "message": tr("The measurement engine stopped unexpectedly.")})
         self.done.emit()
 
     def mark_done(self) -> None:
@@ -155,28 +157,28 @@ class EngineRun(QObject):
 class AddServerDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Add a self-hosted server")
+        self.setWindowTitle(tr("Add a self-hosted server"))
         self.result_server: Optional[Dict[str, Any]] = None
         form = QFormLayout()
         self.kind = QComboBox()
-        self.kind.addItem("ndt7 server (m-lab/ndt-server)", "ndt7")
-        self.kind.addItem("LibreSpeed server", "librespeed")
+        self.kind.addItem(tr("ndt7 server (m-lab/ndt-server)"), "ndt7")
+        self.kind.addItem(tr("LibreSpeed server"), "librespeed")
         self.name = QLineEdit()
         self.name.setMaxLength(60)
-        self.name.setPlaceholderText("Home lab")
+        self.name.setPlaceholderText(tr("Home lab"))
         self.address = QLineEdit()
         self.address.setMaxLength(300)
         self.hint = QLabel()
         self.hint.setWordWrap(True)
         self.hint.setObjectName("hint")
-        form.addRow("Type", self.kind)
-        form.addRow("Name", self.name)
-        form.addRow("Address", self.address)
+        form.addRow(tr("Type"), self.kind)
+        form.addRow(tr("Name"), self.name)
+        form.addRow(tr("Address"), self.address)
         form.addRow("", self.hint)
         self.error = QLabel()
         self.error.setObjectName("error")
         self.error.setWordWrap(True)
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = _localize(QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel))
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
         lay = QVBoxLayout(self)
@@ -188,13 +190,13 @@ class AddServerDialog(QDialog):
 
     def _update_hint(self) -> None:
         if self.kind.currentData() == "ndt7":
-            self.address.setPlaceholderText("speed.example.org or speed.example.org:4443")
-            self.hint.setText("Host name (and optional port) of an ndt7 server with a valid TLS "
-                              "certificate. Plain ws:// is not supported.")
+            self.address.setPlaceholderText(tr("speed.example.org or speed.example.org:4443"))
+            self.hint.setText(tr("Host name (and optional port) of an ndt7 server with a valid TLS "
+                              "certificate. Plain ws:// is not supported."))
         else:
             self.address.setPlaceholderText("https://speed.example.org/")
-            self.hint.setText("Base https:// URL of a LibreSpeed install (the folder that contains "
-                              "backend/garbage.php). Plain http:// is not supported.")
+            self.hint.setText(tr("Base https:// URL of a LibreSpeed install (the folder that contains "
+                              "backend/garbage.php). Plain http:// is not supported."))
 
     def _accept(self) -> None:
         try:
@@ -214,9 +216,36 @@ class AddServerDialog(QDialog):
                        "name": name or host, "host": host, "base_url": base}
             self.result_server = validate_server(raw)
         except ValidationError as exc:
-            self.error.setText(str(exc).capitalize() + ".")
+            self.error.setText(_sentence(tr(str(exc))))
             return
         self.accept()
+
+
+_BUTTON_TEXTS = (("Ok", "OK"), ("Cancel", "Cancel"), ("Close", "Close"), ("Yes", "Yes"), ("No", "No"))
+
+
+def _localize(box):
+    """Translate the standard buttons of a QDialogButtonBox or QMessageBox.
+
+    Qt's own translations are a separate, optional package, so the app does
+    not depend on them for its own dialogs.
+    """
+    if i18n.language() != "en":
+        for attr, text in _BUTTON_TEXTS:
+            button = box.button(getattr(type(box), attr))
+            if button is not None:
+                button.setText(tr(text))
+    return box
+
+
+def _confirm(parent, text: str) -> bool:
+    box = QMessageBox(QMessageBox.Question, APP_NAME, text, QMessageBox.Yes | QMessageBox.No, parent)
+    box.setDefaultButton(QMessageBox.No)
+    return _localize(box).exec_() == QMessageBox.Yes
+
+
+def _sentence(text: str) -> str:
+    return text[:1].upper() + text[1:] + "."
 
 
 def _fit_height(dialog: QDialog) -> None:
@@ -231,43 +260,44 @@ class OptionsDialog(QDialog):
 
     def __init__(self, network: str, max_speed: int, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Options")
+        self.setWindowTitle(tr("Options"))
         self.setFixedWidth(480)
         self.network = network
         self.max_speed = max_speed
         lay = QVBoxLayout(self)
         lay.setSpacing(10)
 
-        lay.addWidget(self._heading("Public test servers"))
-        self.radio_mlab = QRadioButton("M-Lab (Measurement Lab)")
-        self.radio_librespeed = QRadioButton("LibreSpeed public servers")
+        lay.addWidget(self._heading(tr("Public test servers")))
+        self.radio_mlab = QRadioButton(tr("M-Lab (Measurement Lab)"))
+        self.radio_librespeed = QRadioButton(tr("LibreSpeed public servers"))
         (self.radio_librespeed if network == "librespeed" else self.radio_mlab).setChecked(True)
         lay.addWidget(self.radio_mlab)
-        lay.addWidget(self._hint(
+        lay.addWidget(self._hint(tr(
             "Open research platform using the ndt7 protocol, one connection per direction. "
-            "M-Lab publishes every test, including your IP address, as open data."))
+            "M-Lab publishes every test, including your IP address, as open data.")))
         lay.addWidget(self.radio_librespeed)
-        lay.addWidget(self._hint(
+        lay.addWidget(self._hint(tr(
             "Volunteer-run open-source servers, several parallel connections. Results are not "
             "published, but the server operator sees your IP address. Best choice for "
-            "multi-gigabit lines."))
+            "multi-gigabit lines.")))
 
-        lay.addWidget(self._heading("Maximum speed"))
+        lay.addWidget(self._heading(tr("Maximum speed")))
         self.speed = QComboBox()
-        for label, value in (("Up to 1 Gbit/s", 1000), ("Up to 2.5 Gbit/s", 2500), ("Up to 5 Gbit/s", 5000)):
+        for label, value in ((tr("Up to 1 Gbit/s"), 1000), (tr("Up to 2.5 Gbit/s"), 2500),
+                             (tr("Up to 5 Gbit/s"), 5000)):
             self.speed.addItem(label, value)
         self.speed.setCurrentIndex(max(0, self.speed.findData(max_speed)))
-        self.speed.setAccessibleName("Maximum speed")
+        self.speed.setAccessibleName(tr("Maximum speed"))
         lay.addWidget(self.speed)
-        lay.addWidget(self._hint(
+        lay.addWidget(self._hint(tr(
             "Sets the range of the dial. Above 1 Gbit/s, LibreSpeed tests also use more parallel "
             "connections and larger transfers. Results depend on the server's own capacity: "
-            "few public servers can deliver 5 Gbit/s."))
+            "few public servers can deliver 5 Gbit/s.")))
 
-        lay.addWidget(self._hint(
+        lay.addWidget(self._hint(tr(
             "Speedtest.net servers are not offered: Ookla does not license them for "
-            "third-party apps. Your own ndt7 or LibreSpeed server can be added with “Add…”."))
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+            "third-party apps. Your own ndt7 or LibreSpeed server can be added with “Add…”.")))
+        buttons = _localize(QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel))
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
         lay.addWidget(buttons)
@@ -297,15 +327,15 @@ class AboutDialog(QDialog):
 
     def __init__(self, sandbox: str, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("About %s" % APP_NAME)
-        self.setFixedWidth(480)
+        self.setWindowTitle(tr("About %s") % APP_NAME)
+        self.setFixedWidth(540)
         lay = QVBoxLayout(self)
         tabs = QTabWidget()
-        tabs.addTab(self._page(ABOUT_HTML % (
-            APP_NAME, __version__, links.anchor("https://deepinenespañol.org"), sandbox)), "About")
-        tabs.addTab(self._page(CREDITS_HTML % links.anchor("https://realact.net")), "Credits")
+        tabs.addTab(self._page(tr(ABOUT_HTML) % (
+            APP_NAME, __version__, links.anchor("https://deepinenespañol.org"), sandbox)), tr("About"))
+        tabs.addTab(self._page(tr(CREDITS_HTML) % links.anchor("https://realact.net")), tr("Credits"))
         lay.addWidget(tabs)
-        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons = _localize(QDialogButtonBox(QDialogButtonBox.Close))
         buttons.rejected.connect(self.reject)
         buttons.accepted.connect(self.accept)
         lay.addWidget(buttons)
@@ -331,7 +361,7 @@ class AboutDialog(QDialog):
         if not links.open_link(url):
             QMessageBox.information(
                 self, APP_NAME,
-                "The link could not be opened. Copy it into your browser instead:\n\n%s" % url)
+                tr("The link could not be opened. Copy it into your browser instead:\n\n%s") % url)
 
 
 # -- main window -------------------------------------------------------------
@@ -397,19 +427,22 @@ class MainWindow(QMainWindow):
         head.addWidget(brand)
         head.addStretch(1)
         self.nav_group = QButtonGroup(self)
-        for i, text in enumerate(("Speed test", "History")):
+        self.nav_buttons: List[QPushButton] = []
+        for i, text in enumerate((tr("Speed test"), tr("History"))):
             b = QPushButton(text)
             b.setCheckable(True)
             b.setObjectName("nav")
             b.setFocusPolicy(Qt.TabFocus)  # no focus frame after a mouse click
             self.nav_group.addButton(b, i)
+            self.nav_buttons.append(b)
             head.addWidget(b)
         self.nav_group.button(0).setChecked(True)
-        for text, slot in (("Options", self.show_options), ("About", self.show_about)):
+        for text, slot in ((tr("Options"), self.show_options), (tr("About"), self.show_about)):
             extra = QPushButton(text)
             extra.setObjectName("nav")
             extra.setFocusPolicy(Qt.TabFocus)
             extra.clicked.connect(slot)
+            self.nav_buttons.append(extra)
             head.addWidget(extra)
         outer.addLayout(head)
 
@@ -426,6 +459,14 @@ class MainWindow(QMainWindow):
         self._apply_theme()
         self.brand.ensurePolished()   # never clip the title next to the tab buttons
         self.brand.setMinimumWidth(self.brand.fontMetrics().boundingRect(APP_NAME).width() + 12)
+        # Translated labels can be longer: never let the header squeeze its buttons.
+        for button in self.nav_buttons:
+            bold = QFont(button.font())
+            bold.setWeight(QFont.DemiBold)
+            button.setMinimumWidth(QFontMetrics(bold).boundingRect(button.text()).width() + 20)
+        header = (self.brand.minimumWidth() + sum(b.minimumWidth() for b in self.nav_buttons)
+                  + head.spacing() * len(self.nav_buttons) + 40)
+        self.setMinimumWidth(max(520, header))
         self._populate_servers()
         self.refresh_history()
         self.start_btn.setFocus()  # keep initial keyboard focus off the tab buttons
@@ -440,17 +481,17 @@ class MainWindow(QMainWindow):
 
         row = QHBoxLayout()
         self.server_combo = QComboBox()
-        self.server_combo.setAccessibleName("Test server")
+        self.server_combo.setAccessibleName(tr("Test server"))
         self.server_combo.setMinimumContentsLength(24)
         self.server_combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self.server_combo.activated.connect(self._server_chosen)
-        refresh = QPushButton("Find servers")
-        refresh.setToolTip("Look up nearby public M-Lab servers")
+        refresh = QPushButton(tr("Find servers"))
+        refresh.setToolTip(tr("Look up nearby public servers"))
         refresh.clicked.connect(self.find_servers)
-        add = QPushButton("Add…")
-        add.setToolTip("Add your own self-hosted ndt7 or LibreSpeed server")
+        add = QPushButton(tr("Add…"))
+        add.setToolTip(tr("Add your own self-hosted ndt7 or LibreSpeed server"))
         add.clicked.connect(self.add_server)
-        self.remove_btn = QPushButton("Remove")
+        self.remove_btn = QPushButton(tr("Remove"))
         self.remove_btn.clicked.connect(self.remove_server)
         row.addWidget(self.server_combo, 1)
         row.addWidget(refresh)
@@ -461,7 +502,7 @@ class MainWindow(QMainWindow):
         self.gauge = SpeedGauge()
         lay.addWidget(self.gauge, 1)
 
-        self.start_btn = PillButton("Start test")
+        self.start_btn = PillButton(tr("Start test"))
         self.start_btn.clicked.connect(self.toggle_test)
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
@@ -471,17 +512,17 @@ class MainWindow(QMainWindow):
 
         grid = QGridLayout()
         grid.setSpacing(10)
-        self.card_ping = MetricCard("Ping", "ms")
-        self.card_jitter = MetricCard("Jitter", "ms")
-        self.card_down = MetricCard("Download", "Mbit/s")
-        self.card_up = MetricCard("Upload", "Mbit/s")
+        self.card_ping = MetricCard(tr("Ping"), "ms")
+        self.card_jitter = MetricCard(tr("Jitter"), "ms")
+        self.card_down = MetricCard(tr("Download"), "Mbit/s")
+        self.card_up = MetricCard(tr("Upload"), "Mbit/s")
         grid.addWidget(self.card_ping, 0, 0)
         grid.addWidget(self.card_jitter, 0, 1)
         grid.addWidget(self.card_down, 0, 2)
         grid.addWidget(self.card_up, 0, 3)
         lay.addLayout(grid)
 
-        self.status = QLabel("Choose a server and press Start.")
+        self.status = QLabel(tr("Choose a server and press Start."))
         self.status.setObjectName("status")
         self.status.setWordWrap(True)
         self.status.setAlignment(Qt.AlignCenter)
@@ -494,9 +535,10 @@ class MainWindow(QMainWindow):
         lay = QVBoxLayout(page)
         lay.setContentsMargins(0, 0, 0, 0)
         self.table = QTableWidget(0, 6)
-        self.table.setHorizontalHeaderLabels(["Date", "Server", "Ping", "Jitter", "Down", "Up"])
-        for col, tip in ((2, "Idle latency, ms"), (3, "Jitter, ms"), (4, "Download, Mbit/s"),
-                         (5, "Upload, Mbit/s")):
+        self.table.setHorizontalHeaderLabels(
+            [tr("Date"), tr("Server"), tr("Ping"), tr("Jitter"), tr("Down"), tr("Up")])
+        for col, tip in ((2, tr("Idle latency, ms")), (3, tr("Jitter, ms")), (4, tr("Download, Mbit/s")),
+                         (5, tr("Upload, Mbit/s"))):
             self.table.horizontalHeaderItem(col).setToolTip(tip)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -511,8 +553,8 @@ class MainWindow(QMainWindow):
         lay.addWidget(self.history_summary)
         row = QHBoxLayout()
         row.addStretch(1)
-        for text, slot in (("Export CSV…", self.export_history), ("Delete", self.delete_selected),
-                           ("Clear all", self.clear_history)):
+        for text, slot in ((tr("Export CSV…"), self.export_history), (tr("Delete"), self.delete_selected),
+                           (tr("Clear all"), self.clear_history)):
             b = QPushButton(text)
             b.clicked.connect(slot)
             row.addWidget(b)
@@ -558,12 +600,12 @@ class MainWindow(QMainWindow):
     def _populate_servers(self) -> None:
         self.server_combo.clear()
         network = NETWORK_NAMES[self.settings["network"]]
-        self.server_combo.addItem("Nearest public server (%s, automatic)" % network, AUTO)
+        self.server_combo.addItem(tr("Nearest public server (%s, automatic)") % network, AUTO)
         for s in self.public_servers:
             self.server_combo.addItem("%s · %s" % (network, s["name"]), s["id"])
         for s in self.settings["custom_servers"]:
             kind = "ndt7" if s["backend"] == "ndt7" else "LibreSpeed"
-            self.server_combo.addItem("%s · %s (self-hosted %s)" % (s["name"], s["host"], kind), s["id"])
+            self.server_combo.addItem(tr("%s · %s (self-hosted %s)") % (s["name"], s["host"], kind), s["id"])
         wanted = self._pending_selection or self.settings["selected_server"]
         idx = self.server_combo.findData(wanted)
         self.server_combo.setCurrentIndex(idx if idx >= 0 else 0)
@@ -582,18 +624,19 @@ class MainWindow(QMainWindow):
         try:
             self.settings.save()
         except OSError as exc:
-            self.status.setText("Could not save settings: %s" % exc.strerror)
+            self.status.setText(tr("Could not save settings: %s") % exc.strerror)
 
     def _ensure_consent(self) -> bool:
         if self.settings["network"] != "mlab" or self.settings["mlab_consent"]:
             return True
         box = QMessageBox(self)
-        box.setWindowTitle("Public test servers")
+        box.setWindowTitle(tr("Public test servers"))
         box.setTextFormat(Qt.RichText)
-        box.setText(MLAB_NOTICE)
+        box.setText(tr(MLAB_NOTICE))
         box.setTextInteractionFlags(Qt.TextSelectableByMouse)
         box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        box.button(QMessageBox.Ok).setText("Use M-Lab servers")
+        _localize(box)
+        box.button(QMessageBox.Ok).setText(tr("Use M-Lab servers"))
         if box.exec_() != QMessageBox.Ok:
             return False
         self.settings["mlab_consent"] = True
@@ -603,7 +646,7 @@ class MainWindow(QMainWindow):
     def find_servers(self) -> None:
         if self.run is not None or not self._ensure_consent():
             return
-        self.status.setText("Looking up nearby %s servers…" % NETWORK_NAMES[self.settings["network"]])
+        self.status.setText(tr("Looking up nearby %s servers…") % NETWORK_NAMES[self.settings["network"]])
         self._start_engine("locate", None, on_servers=self._servers_found)
 
     def _servers_found(self, servers: List[Dict[str, Any]]) -> None:
@@ -611,7 +654,7 @@ class MainWindow(QMainWindow):
         self._pending_selection = self.server_combo.currentData()
         self._populate_servers()
         self._pending_selection = None
-        self.status.setText("Found %d nearby servers." % len(servers))
+        self.status.setText(tr("Found %d nearby servers.") % len(servers))
         self.server_combo.showPopup()
 
     def add_server(self) -> None:
@@ -638,7 +681,7 @@ class MainWindow(QMainWindow):
     def toggle_test(self) -> None:
         if self.run is not None:
             self.run.cancel()
-            self.status.setText("Test cancelled.")
+            self.status.setText(tr("Test cancelled."))
             return
         sid = self.server_combo.currentData()
         custom = next((s for s in self.settings["custom_servers"] if s["id"] == sid), None)
@@ -648,7 +691,7 @@ class MainWindow(QMainWindow):
         if not self._ensure_consent():
             return
         # M-Lab access tokens are short-lived, so always locate right before testing.
-        self.status.setText("Finding the best server…")
+        self.status.setText(tr("Finding the best server…"))
         self._set_running(True)
 
         def picked(servers: List[Dict[str, Any]]) -> None:
@@ -665,11 +708,11 @@ class MainWindow(QMainWindow):
             c.set(None)
             c.set_active(False)
         self.gauge.reset()
-        self.status.setText("Testing with %s (%s)…" % (server["name"], server["host"]))
+        self.status.setText(tr("Testing with %s (%s)…") % (server["name"], server["host"]))
         self._start_engine("run", server)
 
     def _set_running(self, running: bool) -> None:
-        self.start_btn.setText("Stop" if running else "Start test")
+        self.start_btn.setText(tr("Stop") if running else tr("Start test"))
         self.server_combo.setEnabled(not running)
 
     def _start_engine(self, op: str, server: Optional[Dict[str, Any]], on_servers=None) -> None:
@@ -703,7 +746,7 @@ class MainWindow(QMainWindow):
             self.sandbox_info = ev
         elif kind == "stage":
             phase = ev["phase"]
-            caption = {"ping": "Measuring latency", "download": "Download", "upload": "Upload"}[phase]
+            caption = {"ping": tr("Measuring latency"), "download": tr("Download"), "upload": tr("Upload")}[phase]
             self.gauge.set_caption(caption)
             self.gauge.reset()
             cards = {"ping": self.card_ping, "download": self.card_down, "upload": self.card_up}
@@ -725,9 +768,9 @@ class MainWindow(QMainWindow):
         elif kind == "result":
             self._finish(ev)
         elif kind == "error":
-            self.gauge.set_caption("Error")
+            self.gauge.set_caption(tr("Error"))
             self.gauge.reset()
-            self.status.setText(ev["message"])
+            self.status.setText(tr(ev["message"]))
 
     def _finish(self, res: Dict[str, Any]) -> None:
         server = self.current_server or {}
@@ -735,19 +778,19 @@ class MainWindow(QMainWindow):
             c.set_active(False)
         self.card_ping.set(res["ping_ms"])
         self.card_jitter.set(res["jitter_ms"])
-        self.card_down.set(res["download_mbps"], "loaded latency %s ms" % _fmt(res["download_latency_ms"])
+        self.card_down.set(res["download_mbps"], tr("loaded latency %s ms") % _fmt(res["download_latency_ms"])
                            if res["download_latency_ms"] is not None else "")
-        self.card_up.set(res["upload_mbps"], "loaded latency %s ms" % _fmt(res["upload_latency_ms"])
+        self.card_up.set(res["upload_mbps"], tr("loaded latency %s ms") % _fmt(res["upload_latency_ms"])
                          if res["upload_latency_ms"] is not None else "")
-        self.gauge.set_caption("Done")
+        self.gauge.set_caption(tr("Done"))
         self.gauge.set_value(res["download_mbps"])
-        self.status.setText("Tested with %s (%s) · %s" % (
-            server.get("name", res["host"]), server.get("provider", ""),
+        self.status.setText(tr("Tested with %s (%s) · %s") % (
+            server.get("name", res["host"]), tr(server.get("provider", "")),
             datetime.datetime.fromtimestamp(res["timestamp"]).strftime("%Y-%m-%d %H:%M")))
         try:
             self.history.add(res, server.get("backend", "ndt7"), server.get("name", res["host"]))
         except Exception as exc:  # history is non-critical
-            self.status.setText(self.status.text() + " (not saved: %s)" % exc.__class__.__name__)
+            self.status.setText(self.status.text() + tr(" (not saved: %s)") % exc.__class__.__name__)
         self.refresh_history()
 
     # -- history -------------------------------------------------------
@@ -771,20 +814,20 @@ class MainWindow(QMainWindow):
         if rows:
             avg_d = sum(r["download_mbps"] for r in rows) / len(rows)
             avg_u = sum(r["upload_mbps"] for r in rows) / len(rows)
-            self.history_summary.setText("%d tests · average %s↓ / %s↑ Mbit/s" % (
+            self.history_summary.setText(tr("%d tests · average %s↓ / %s↑ Mbit/s") % (
                 len(rows), _fmt(avg_d), _fmt(avg_u)))
         else:
-            self.history_summary.setText("No tests yet. Results are stored only on this computer.")
+            self.history_summary.setText(tr("No tests yet. Results are stored only on this computer."))
 
     def export_history(self) -> None:
         default = os.path.join(os.path.expanduser("~"), "deepin-speedtest-history.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export history", default, "CSV files (*.csv)")
+        path, _ = QFileDialog.getSaveFileName(self, tr("Export history"), default, tr("CSV files (*.csv)"))
         if not path:
             return
         try:
             export_csv(path, list(reversed(self.history.rows())))
         except OSError as exc:
-            QMessageBox.warning(self, APP_NAME, "Could not export: %s" % (exc.strerror or exc))
+            QMessageBox.warning(self, APP_NAME, tr("Could not export: %s") % (exc.strerror or exc))
 
     def delete_selected(self) -> None:
         ids = {self.table.item(i.row(), 0).data(Qt.UserRole) for i in self.table.selectedIndexes()}
@@ -793,7 +836,7 @@ class MainWindow(QMainWindow):
         self.refresh_history()
 
     def clear_history(self) -> None:
-        if QMessageBox.question(self, APP_NAME, "Delete all saved results?") == QMessageBox.Yes:
+        if _confirm(self, tr("Delete all saved results?")):
             self.history.clear()
             self.refresh_history()
 
@@ -801,19 +844,19 @@ class MainWindow(QMainWindow):
 
     def _sandbox_text(self) -> str:
         if self.sandbox_info is None:
-            return "Run a test to see the engine sandbox status."
+            return tr("Run a test to see the engine sandbox status.")
         abi = self.sandbox_info["landlock_abi"]
         if abi:
-            return "Landlock ABI %d active (files, exec%s restricted)" % (
-                abi, ", TCP ports" if abi >= 4 else "")
-        return "Landlock unavailable on this kernel; resource limits and no_new_privs active"
+            return tr("Landlock ABI %d active (files, exec%s restricted)") % (
+                abi, tr(", TCP ports") if abi >= 4 else "")
+        return tr("Landlock unavailable on this kernel; resource limits and no_new_privs active")
 
     def show_about(self) -> None:
         AboutDialog(self._sandbox_text(), self).exec_()
 
     def show_options(self) -> None:
         if self.run is not None:
-            self.status.setText("Stop the running test before changing options.")
+            self.status.setText(tr("Stop the running test before changing options."))
             return
         dlg = OptionsDialog(self.settings["network"], self.settings["max_speed"], self)
         if dlg.exec_() != QDialog.Accepted:
@@ -827,7 +870,7 @@ class MainWindow(QMainWindow):
         self._save_settings()
         self.gauge.set_max_speed(dlg.max_speed)
         self._populate_servers()
-        self.status.setText("Options saved.")
+        self.status.setText(tr("Options saved."))
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt API
         if self.run is not None:
@@ -850,6 +893,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     font = app.font()
     font.setStyleStrategy(QFont.PreferAntialias)
     app.setFont(font)
+    if i18n.language() != "en":
+        # Qt's own texts (file dialog, context menus), when its translations are installed.
+        qt_translator = QTranslator(app)
+        if qt_translator.load("qtbase_" + i18n.language(),
+                              QLibraryInfo.location(QLibraryInfo.TranslationsPath)):
+            app.installTranslator(qt_translator)
     win = MainWindow()
 
     def on_exception(kind, value, tb) -> None:
@@ -858,11 +907,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         import traceback
         traceback.print_exception(kind, value, tb)
         try:
-            win.status.setText("Internal error: %s" % clean_text(repr(value), 200))
+            win.status.setText(tr("Internal error: %s") % clean_text(repr(value), 200))
         except Exception:  # noqa: BLE001 - never raise from the hook
             pass
 
     sys.excepthook = on_exception
-    win.resize(600, 760)
+    win.resize(max(600, win.minimumWidth()), 760)
     win.show()
     return app.exec_()

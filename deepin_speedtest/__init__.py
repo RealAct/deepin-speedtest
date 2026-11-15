@@ -2,4 +2,4 @@
 
 APP_ID = "io.github.realact.DeepinSpeedtest"
 APP_NAME = "Deepin Speedtest"
-__version__ = "1.1.1"
+__version__ = "1.2.0"

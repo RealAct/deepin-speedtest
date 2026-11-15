@@ -5,17 +5,24 @@
   <project_license>GPL-3.0-or-later</project_license>
   <name>Deepin Speedtest</name>
   <summary>Open, private internet speed test</summary>
+  <summary xml:lang="es">Prueba de velocidad de internet abierta y privada</summary>
   <description>
     <p>
       Deepin Speedtest measures latency, jitter, download and upload speed using the open
       ndt7 protocol (public M-Lab servers or your own) or a self-hosted LibreSpeed server.
       It has no telemetry and keeps its result history only on your computer.
     </p>
+    <p xml:lang="es">
+      Deepin Speedtest mide la latencia, el jitter y la velocidad de descarga y de subida con
+      el protocolo abierto ndt7 (servidores públicos de M-Lab o los tuyos) o con servidores
+      LibreSpeed. No tiene telemetría y guarda el historial de resultados solo en tu equipo.
+    </p>
   </description>
   <launchable type="desktop-id">io.github.realact.DeepinSpeedtest.desktop</launchable>
   <url type="homepage">https://github.com/RealAct/deepin-speedtest</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.2.0" date="2026-11-15"/>
     <release version="1.1.1" date="2026-11-15"/>
     <release version="1.1.0" date="2026-11-14"/>
   </releases>

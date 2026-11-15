@@ -164,7 +164,8 @@ def test_dialogs_and_history_actions(window, monkeypatch, tmp_path):
     window.table.selectRow(0)
     window.delete_selected()
     assert window.table.rowCount() == 0
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.Yes)
+    import deepin_speedtest.app as appmod_
+    monkeypatch.setattr(appmod_, "_confirm", lambda *a, **k: True)
     window.clear_history()
     window._switch_page(1)
     window.gauge.repaint()
