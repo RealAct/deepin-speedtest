@@ -127,8 +127,11 @@ def test_spanish_desktop_app(tmp_path, monkeypatch):
         app.processEvents()
 
 
-def test_spanish_terminal_help(capsys):
+def test_spanish_terminal_help(capsys, monkeypatch):
     from deepin_speedtest import cli
+    # Only the help text is under test: do not harden (or refuse) the test process itself.
+    monkeypatch.setattr(cli.hardening, "refuse_root", lambda: None)
+    monkeypatch.setattr(cli.hardening, "harden_process", lambda: None)
     i18n.set_language("es")
     with pytest.raises(SystemExit):
         cli.main(["--help"])
