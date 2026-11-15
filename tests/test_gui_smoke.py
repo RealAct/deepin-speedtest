@@ -102,6 +102,7 @@ def test_dialogs_and_history_actions(window, monkeypatch, tmp_path):
     from PyQt5.QtWidgets import QFileDialog, QMessageBox
     from deepin_speedtest.app import AddServerDialog
 
+    from PyQt5.QtCore import Qt
     from PyQt5.QtWidgets import QLabel
     from deepin_speedtest.app import AboutDialog
 
@@ -109,9 +110,29 @@ def test_dialogs_and_history_actions(window, monkeypatch, tmp_path):
     about = AboutDialog(window._sandbox_text(), window)
     texts = [[label.text() for label in about.tabs.widget(i).findChildren(QLabel)] for i in range(2)]
     assert about.tabs.tabText(1) == "Credits"
-    assert "Created by Eli Linares for https://deepinenespañol.org" in texts[0][0]
+    assert ('Created by Eli Linares for <a href="https://xn--deepinenespaol-1nb.org">'
+            'https://deepinenespañol.org</a>') in texts[0][0]
     assert "Landlock unavailable" in texts[0][0]
-    assert "Created by Eli Linares<br><br>https://realact.net" in texts[1][0]
+    assert ('Created by Eli Linares<br><br><a href="https://realact.net">https://realact.net</a>'
+            in texts[1][0])
+    # Clicking a link goes through links.open_link, and Qt never opens it itself.
+    from deepin_speedtest import links
+    opened = []
+    monkeypatch.setattr(links, "open_link", lambda url: opened.append(url) or True)
+    for i, url in ((0, "https://xn--deepinenespaol-1nb.org"), (1, "https://realact.net")):
+        label = about.tabs.widget(i).findChildren(QLabel)[0]
+        assert not label.openExternalLinks()
+        assert label.textInteractionFlags() & Qt.LinksAccessibleByMouse
+        assert label.textInteractionFlags() & Qt.LinksAccessibleByKeyboard
+        label.linkActivated.emit(url)
+    assert opened == ["https://xn--deepinenespaol-1nb.org", "https://realact.net"]
+    # A failure to open is reported instead of being silent.
+    shown = []
+    monkeypatch.setattr(links, "open_link", lambda url: False)
+    monkeypatch.setattr(QMessageBox, "information",
+                        staticmethod(lambda *a: shown.append(a[2]) or QMessageBox.Ok))
+    about._open_link("https://realact.net")
+    assert "https://realact.net" in shown[0]
     monkeypatch.setattr(AboutDialog, "exec_", lambda self: 0)
     window.show_about()
 

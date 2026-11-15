@@ -1,3 +1,10 @@
+deepin-speedtest (1.1.1) unstable; urgency=medium
+
+  * The links in the About and Credits tabs are now clickable and open in
+    your browser. Only these two fixed addresses can be opened.
+
+ -- RealAct <8281482+RealAct@users.noreply.github.com>  Sun, 15 Nov 2026 22:30:00 +0000
+
 deepin-speedtest (1.1.0) unstable; urgency=medium
 
   * New Options window: choose the public server network (M-Lab or the
